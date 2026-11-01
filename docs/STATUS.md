@@ -1,3 +1,17 @@
+# 2026-11-02 文档清理：移除已完成的历史计划与旧评审
+
+**删除**（均可从 git 历史取回）：
+
+- `docs/superpowers/plans/`（13 篇，M1–M4 实施计划）与 `docs/superpowers/specs/`（6 篇设计稿）——对应功能均已实现，现状由 `STATUS.md` / `ARCHITECTURE.md` / `CHARACTER_FORMAT.md` 承载。
+- `docs/TECHNICAL_REVIEW.md`（2026-10-16 快照）——其高风险结论已由 `docs/reviews/2026-11-01-project-review.md` 复核纠正。
+- `docs/assets/cat-preview.png`、`docs/assets/slime-preview.png`——历史测试素材预览，不代表当前随包 PNG。
+
+**保留**：`PROJECT_SPEC.md`（需求原文）、`ARCHITECTURE.md`、`CHARACTER_FORMAT.md`、`INDEX.md`、`MAINTENANCE.md`、`STATUS.md`（交接证据）、`TESTING.md`、`UPSTREAM_AUDIT.md`、`YIMY_VISUAL_STYLE.md`、`artwork/yimy-bubble-prompt.txt`、`reviews/2026-11-01-*.md`、`assets/character-grid-reference.png`。
+
+**引用同步**：`AGENTS.md` 记忆分层去掉「历史」行；`INDEX.md` 文档地图去掉 3 条；`CHARACTER_FORMAT.md` 去掉历史预览段；`2026-11-01-project-review.md` 的旧评审说明改为「已清理，可从 git 历史取回」；`MAINTENANCE.md` 记录清理事实。
+
+**边界**：本轮只改文档与删除历史文件，未改产品代码；构建与测试沿用最近一次 0.3.1 结果（0 警告 / 0 错误，Core 187 + App 24）。
+
 # 2026-11-02 行为节奏修正与窗口落脚/食物核验
 
 **根因**（均已核对源码，并用 `git show 7a0fb13` 确认不是 0.3.0 引入）：

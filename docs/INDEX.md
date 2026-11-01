@@ -227,7 +227,6 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `docs/reviews/2026-11-01-remediation.md` | R01–R13 的修正、测试与硬件未验证边界 | 本轮处置详细落点；后续行为变更仍写 STATUS |
 | `docs/MAINTENANCE.md` | **当前维护记忆**，可更新短摘要 | 快速接手，查看当前有效行为、四档状态、下一项任务；与 STATUS 同步 |
 | `docs/reviews/2026-11-01-project-review.md` | **本轮审查快照**：覆盖范围、实跑、四项沙盒复现、R01–R13 待办、旧评审纠正 | 处理稳定性问题时按 ID 定位；修复后在 STATUS 登记 |
-| `docs/TECHNICAL_REVIEW.md` | **历史快照**（2026-10-16）：功能盘点与重构建议 | 只追溯当时判断；部分结论已由本轮审查纠正，不能当作当前缺陷或授权方案 |
 | `docs/INDEX.md`（本页） | 结构索引 | 定位代码/脚本/文档；结构变动时同步 |
 | `docs/STATUS.md` | **交接证据来源**，最新条目在最上方，旧条目限于原日期和场景 | 先读最新条目，按功能定位相关历史；改行为或建立维护基线后追加带日期条目 |
 | `docs/ARCHITECTURE.md` | 当前分层决策、真实类型和资源边界 | 决定代码该放哪一层时读 |
@@ -235,8 +234,6 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `docs/TESTING.md` | 验收入口与 Windows 桌面验收矩阵 | 决定"怎么算通过"时读 |
 | `docs/YIMY_VISUAL_STYLE.md` / `docs/artwork/yimy-bubble-prompt.txt` | 咿米主题、气泡原画来源 / hash / 提示词、切图与复核入口 | 改气泡外观或替换皮肤时读 |
 | `docs/UPSTREAM_AUDIT.md` | eSheep 上游审计结论（固定提交、许可、代码路径） | 需要复核上游时读；**在仓库外取源码** |
-| `docs/superpowers/specs/*.md`（6 篇） | 各功能的设计稿（历史） | 追溯某个功能的原始设计意图 |
-| `docs/superpowers/plans/*.md`（13 篇） | 各阶段的实施计划（历史） | 追溯实施步骤与当时的决策 |
 | `docs/assets/*.png` | 可重复生成的预览/参考图 | 改角色格式文档配图 |
 | `AGENTS.md` | **Agent 入口约束** | 每次开工先读 |
 | `README.md` / `RELEASE_NOTES.md` / `THIRD_PARTY_NOTICES.md` | 对外说明 | 面向用户/发布的改动 |
