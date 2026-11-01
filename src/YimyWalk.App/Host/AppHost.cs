@@ -119,8 +119,8 @@ internal sealed class AppHost : ApplicationContext
     {
         _log.Record(code, error);
         RuntimeDiagnostic = code == "FRAME_LOOP_STOPPED"
-            ? "运行已暂停；可清空后继续或重新启动。诊断已写入本地日志。"
-            : "部分操作失败，已保留其他桌宠；可调整大小或重试创建。诊断已写入本地日志。";
+            ? "已暂停。可清空后继续，或重新启动程序。"
+            : "部分操作失败，其他桌宠不受影响。";
     }
 
     private void RenderSafely(PetWindow window, Action render)
@@ -418,7 +418,7 @@ internal sealed class AppHost : ApplicationContext
     {
         if (_virtualFood.Targets.Count >= _virtualFood.MaxTargets)
         {
-            RuntimeDiagnostic = "虚拟食物已达上限，请等待消耗后再试。";
+            RuntimeDiagnostic = "食物已达上限，请稍后再试。";
             return;
         }
         var area = _surface.SpawnArea;
@@ -639,12 +639,12 @@ internal sealed class AppHost : ApplicationContext
 
     private string GetSettingsStatus()
     {
-        if (_settingsLoad.UsedBackup) return "Settings: recovered from backup";
+        if (_settingsLoad.UsedBackup) return "已从备份恢复设置";
         if (_settingsLoad.UsedDefaults)
             return string.IsNullOrWhiteSpace(_settingsLoad.Diagnostic)
-                ? "Settings: using defaults"
-                : $"Settings: using defaults ({_settingsLoad.Diagnostic})";
-        return "Settings: loaded";
+                ? "使用默认设置"
+                : $"使用默认设置（{_settingsLoad.Diagnostic}）";
+        return "设置已加载";
     }
 
     private void SaveSettings(bool debounce = false)
@@ -665,11 +665,11 @@ internal sealed class AppHost : ApplicationContext
         if (_disposed) return;
         var status = _settingsSave.State switch
         {
-            SettingsSaveState.Applied => "Settings: applied; saving",
-            SettingsSaveState.Saving => "Settings: saving",
-            SettingsSaveState.Saved => "Settings: saved",
-            SettingsSaveState.Failed => $"Settings: applied for this run; save failed ({_settingsSave.Error})",
-            _ => "Settings: unknown"
+            SettingsSaveState.Applied => "设置已应用，保存中",
+            SettingsSaveState.Saving => "正在保存设置",
+            SettingsSaveState.Saved => "设置已保存",
+            SettingsSaveState.Failed => $"设置已应用，但保存失败（{_settingsSave.Error}）",
+            _ => "设置状态未知"
         };
         _manager.SetSettingsStatus(status);
     }

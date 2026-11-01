@@ -34,7 +34,7 @@ internal sealed class CharactersPage : ManagerPage
         _characters.Columns.Add("默认", 50);
 
         var layout = CreateRootLayout();
-        AddHeading(layout, "角色", "管理角色包和下次创建的默认角色。查看角色不会改变当前运行实例的选择。");
+        AddHeading(layout, "角色", "浏览角色包，设置新建桌宠的默认角色。");
 
         var content = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, MinimumSize = new Size(0, 430), ColumnCount = 2, RowCount = 1 };
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
@@ -110,7 +110,7 @@ internal sealed class CharactersPage : ManagerPage
                     var choice = new RoleChoice(definition.Id, definition.DisplayName);
                     var row = new ListViewItem(choice.DisplayName) { Tag = choice };
                     row.SubItems.Add(choice.Id);
-                    row.SubItems.Add("有效");
+                    row.SubItems.Add("可用");
                     row.SubItems.Add(choice.Id.Equals(current, StringComparison.OrdinalIgnoreCase) ? "当前" : string.Empty);
                     _characters.Items.Add(row);
                 }
@@ -125,8 +125,8 @@ internal sealed class CharactersPage : ManagerPage
 
     public void SetReloadStatus(int loadedCount, int failureCount)
         => _reloadStatus.Text = failureCount == 0
-            ? $"已加载 {loadedCount} 个角色定义。"
-            : $"已保留可用角色；本次刷新失败 {failureCount} 个。";
+            ? $"已加载 {loadedCount} 个角色。"
+            : $"已保留可用角色；{failureCount} 个刷新失败。";
 
     private void ReloadCharacters()
     {
@@ -148,7 +148,7 @@ internal sealed class CharactersPage : ManagerPage
         var role = _characters.SelectedItems.Count > 0 ? _characters.SelectedItems[0].Tag as RoleChoice : null;
         if (role is null || !Host.Catalog.TryGet(role.Id, out var definition))
         {
-            _roleName.Text = "没有可用角色定义";
+            _roleName.Text = "没有可用角色";
             _roleId.Text = string.Empty;
             _roleInfo.Text = string.Empty;
             _setDefault.Enabled = false;
@@ -157,9 +157,9 @@ internal sealed class CharactersPage : ManagerPage
         }
 
         _roleName.Text = definition.DisplayName;
-        _roleId.Text = $"角色 ID：{definition.Id} · 有效定义";
+        _roleId.Text = $"角色 ID：{definition.Id}";
         var isDefault = definition.Id.Equals(Host.SelectedRoleId, StringComparison.OrdinalIgnoreCase);
-        _roleInfo.Text = $"{(isDefault ? "当前为下次创建默认角色。" : "预览角色，不会改变下次创建默认值。")}{Environment.NewLine}角色基础行为：自主走动速度 {definition.Movement.WalkSpeed:0.#} px/s；活跃度倍率在互动页统一设置。";
+        _roleInfo.Text = $"{(isDefault ? "新建桌宠将使用此角色。" : "预览中，不会改变默认角色。")}{Environment.NewLine}走动速度 {definition.Movement.WalkSpeed:0.#} px/s。";
         _setDefault.Text = isDefault ? "当前默认" : "设为默认角色";
         _setDefault.Enabled = !isDefault;
         _preview.ShowIdleFrame(definition);

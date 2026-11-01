@@ -16,7 +16,7 @@ internal sealed class OverviewPage : ManagerPage
     public OverviewPage(AppHost host) : base(host)
     {
         var layout = CreateRootLayout();
-        AddHeading(layout, "YimyWalk", "桌宠继续在桌面运行，主菜单负责管理当前状态和设置。");
+        AddHeading(layout, "YimyWalk", "查看状态，创建或管理桌宠。");
 
         var summary = UiTheme.CreateCard();
         summary.Dock = DockStyle.Top;
@@ -55,7 +55,7 @@ internal sealed class OverviewPage : ManagerPage
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = false, Height = 174, Padding = new Padding(0, UiTheme.Space8, 0, 0), WrapContents = true };
         foreach (var count in new[] { 1, 10, 50, 100 })
         {
-            var button = UiTheme.CreateButton($"快捷 {count}");
+            var button = UiTheme.CreateButton($"创建 {count}");
             button.AccessibleName = $"创建 {count} 只桌宠";
             button.Click += (_, _) => Host.QueueCreate(Host.SelectedRoleId, count);
             buttons.Controls.Add(button);
@@ -73,7 +73,7 @@ internal sealed class OverviewPage : ManagerPage
         var feed = UiTheme.CreateButton("喂食全部");
         feed.Click += (_, _) => Host.FeedAll();
         buttons.Controls.Add(feed);
-        var food = UiTheme.CreateButton("生成虚拟食物");
+        var food = UiTheme.CreateButton("投放食物");
         food.Click += (_, _) => Host.SpawnVirtualFood();
         buttons.Controls.Add(food);
         var hide = UiTheme.CreateButton("隐藏桌宠");
@@ -92,13 +92,12 @@ internal sealed class OverviewPage : ManagerPage
 
     public override void RefreshFromHost()
     {
-        _active.Text = $"活动实例：{Host.ActivePetCount}";
+        _active.Text = $"活动桌宠：{Host.ActivePetCount}";
         _pending.Text = $"待创建：{Host.PendingCreationCount}";
-        _settings.Text = $"全局设置保存状态：{Host.SettingsSaveState}";
-        _defaultRole.Text = $"当前默认角色：{Host.SelectedRoleId}";
+        _settings.Text = $"设置：{UiText.SaveStateLabel(Host.SettingsSaveState)}";
+        _defaultRole.Text = $"默认角色：{Host.SelectedRoleId}";
         _pause.Text = Host.IsPaused ? "继续桌宠" : "暂停桌宠";
-        _operation.Text = Host.RuntimeDiagnostic ?? (Host.PendingCreationCount > 0
-            ? "创建队列正在处理；一键清空会先取消待创建，再删除当前实例。"
-            : "单实例覆盖只在本次运行有效；总览的保存状态只描述全局设置。");
+        _operation.Text = Host.RuntimeDiagnostic
+            ?? (Host.PendingCreationCount > 0 ? "正在创建桌宠…" : string.Empty);
     }
 }

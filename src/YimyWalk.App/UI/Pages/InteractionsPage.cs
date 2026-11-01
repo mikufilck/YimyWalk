@@ -13,14 +13,14 @@ internal sealed class InteractionsPage : ManagerPage
     private readonly AntdUI.InputNumber _jumpDesire = UiTheme.CreateInputNumber(0m, 100m, 1m, 0, 110);
     private readonly AntdUI.InputNumber _climbDesire = UiTheme.CreateInputNumber(0m, 100m, 1m, 0, 110);
     private readonly AntdUI.InputNumber _windowJumpDesire = UiTheme.CreateInputNumber(0m, 100m, 1m, 0, 110);
-    private readonly Label _activityHelp = UiTheme.CreateMutedLabel("活跃度是自主行为的频率/倾向倍率，不改变移动速度、重力或动画帧率。");
+    private readonly Label _activityHelp = UiTheme.CreateMutedLabel("数值越高，自主活动越频繁；不影响移动速度。");
     private readonly Label _status = UiTheme.CreateMutedLabel();
     private bool _syncing;
 
     public InteractionsPage(AppHost host) : base(host)
     {
         var layout = CreateRootLayout();
-        AddHeading(layout, "互动", "全局默认供跟随实例继承；运行级限制优先于单只设置。");
+        AddHeading(layout, "互动", "这些默认值会被单只桌宠继承。");
         var card = UiTheme.CreateCard();
         card.Dock = DockStyle.Top;
         card.Height = 640;
@@ -28,31 +28,31 @@ internal sealed class InteractionsPage : ManagerPage
         var checks = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, Padding = new Padding(0, UiTheme.Space12, 0, 0) };
         checks.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 78));
         checks.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 22));
-        AddSettingRow(checks, "默认主动走动", "允许实例跟随此全局默认自主行动。", _walk);
-        AddSettingRow(checks, "默认自动气泡", "仅作为继承来源；运行级限制优先。", _defaultDialogue);
-        AddSettingRow(checks, "饥饿增长", "控制饥饿值随模拟时间增长。", _hunger);
-        AddSettingRow(checks, "应用切换反馈", "关闭后停止专用的前台应用轮询。", _external);
+        AddSettingRow(checks, "默认主动走动", "允许桌宠自己走动。", _walk);
+        AddSettingRow(checks, "默认自动气泡", "允许桌宠自动说话。", _defaultDialogue);
+        AddSettingRow(checks, "饥饿增长", "桌宠会随时间变饿。", _hunger);
+        AddSettingRow(checks, "应用切换反馈", "切换应用时，桌宠会说一句话。", _external);
         var activityRow = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(0, UiTheme.Space8, 0, 0) };
         activityRow.Controls.Add(UiTheme.CreateBodyLabel("默认活跃度倍率"));
         activityRow.Controls.Add(_activity);
         checks.Controls.Add(activityRow, 0, checks.RowCount++);
         checks.Controls.Add(_activityHelp, 0, checks.RowCount++);
-        AddNumericSettingRow(checks, "跳跃欲望 (%)", "每次尝试的概率；活跃度只缩短等待时间；0 只停止新的跳跃。", _jumpDesire);
-        AddNumericSettingRow(checks, "攀爬欲望 (%)", "每次尝试的概率；活跃度只缩短等待时间；0 只停止新的攀爬。", _climbDesire);
-        AddNumericSettingRow(checks, "窗口跳跃欲望 (%)", "有可达的可见窗口时，用于决定是否尝试跳到窗口顶部；0% 禁止，100% 每次优先尝试。", _windowJumpDesire);
+        AddNumericSettingRow(checks, "跳跃欲望 (%)", "数值越高越爱跳；0 表示不跳。", _jumpDesire);
+        AddNumericSettingRow(checks, "攀爬欲望 (%)", "数值越高越爱爬；0 表示不爬。", _climbDesire);
+        AddNumericSettingRow(checks, "窗口跳跃欲望 (%)", "数值越高越愿意跳到窗口顶部。", _windowJumpDesire);
         card.Controls.Add(checks);
         card.Controls.Add(cardTitle);
 
         var gate = UiTheme.CreateCard();
         gate.Dock = DockStyle.Top;
         gate.Height = 128;
-        var gateTitle = new Label { Text = "运行级限制", AutoSize = true, Font = UiTheme.SectionFont, Dock = DockStyle.Top };
+        var gateTitle = new Label { Text = "气泡总开关", AutoSize = true, Font = UiTheme.SectionFont, Dock = DockStyle.Top };
         _dialogueGate.Margin = new Padding(0, UiTheme.Space12, 0, 0);
         var gateRow = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = false };
-        gateRow.Controls.Add(UiTheme.CreateBodyLabel("允许显示自动气泡（运行级限制）"));
+        gateRow.Controls.Add(UiTheme.CreateBodyLabel("允许自动气泡"));
         gateRow.Controls.Add(UiTheme.WrapSwitch(_dialogueGate));
         gate.Controls.Add(gateRow);
-        var gateNote = UiTheme.CreateMutedLabel("关闭后，单只实例的“强制开启”也不能绕过；恢复后会继续使用原有默认和覆盖。");
+        var gateNote = UiTheme.CreateMutedLabel("关闭后所有桌宠都不再自动说话。");
         gateNote.Dock = DockStyle.Top;
         gate.Controls.Add(gateNote);
         gate.Controls.Add(gateTitle);
@@ -60,11 +60,6 @@ internal sealed class InteractionsPage : ManagerPage
         AddRow(layout, gate);
         AddRow(layout, _status);
 
-        _walk.CheckedText = "开"; _walk.UnCheckedText = "关";
-        _defaultDialogue.CheckedText = "开"; _defaultDialogue.UnCheckedText = "关";
-        _dialogueGate.CheckedText = "开"; _dialogueGate.UnCheckedText = "关";
-        _hunger.CheckedText = "开"; _hunger.UnCheckedText = "关";
-        _external.CheckedText = "开"; _external.UnCheckedText = "关";
         _walk.CheckedChanged += (_, _) => { if (!_syncing) Host.DefaultWalkEnabled = _walk.Checked; };
         _defaultDialogue.CheckedChanged += (_, _) => { if (!_syncing) Host.DefaultDialogueEnabled = _defaultDialogue.Checked; };
         _dialogueGate.CheckedChanged += (_, _) => { if (!_syncing) Host.DialogueEnabled = _dialogueGate.Checked; };
@@ -92,7 +87,7 @@ internal sealed class InteractionsPage : ManagerPage
             _jumpDesire.Value = (decimal)(Host.JumpDesire * 100f);
             _climbDesire.Value = (decimal)(Host.ClimbDesire * 100f);
             _windowJumpDesire.Value = (decimal)(Host.WindowJumpDesire * 100f);
-            _status.Text = $"全局设置保存状态：{Host.SettingsSaveState}";
+            _status.Text = $"设置：{UiText.SaveStateLabel(Host.SettingsSaveState)}";
         }
         finally { _syncing = false; }
     }

@@ -13,10 +13,10 @@ internal sealed class TrayIconHost : IDisposable
     {
         _host = host;
         var menu = _menu = new ContextMenuStrip();
-        menu.Items.Add("打开主菜单", null, (_, _) => _host.ShowManager());
-        menu.Items.Add("清空宠物", null, (_, _) => _host.ClearPets());
-        menu.Items.Add("隐藏宠物", null, (_, _) => _host.SetPetsVisible(false));
-        menu.Items.Add("显示宠物", null, (_, _) => _host.SetPetsVisible(true));
+        menu.Items.Add("打开管理器", null, (_, _) => _host.ShowManager());
+        menu.Items.Add("清空桌宠", null, (_, _) => _host.ClearPets());
+        menu.Items.Add("隐藏桌宠", null, (_, _) => _host.SetPetsVisible(false));
+        menu.Items.Add("显示桌宠", null, (_, _) => _host.SetPetsVisible(true));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("退出 YimyWalk", null, (_, _) => _host.ExitApplication());
         _appIcon = AppIcon.Load();

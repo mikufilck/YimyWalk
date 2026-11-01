@@ -1,6 +1,6 @@
 # YimyWalk 当前维护记忆
 
-> 最近核对：2026-11-01；维护分支 `codex/bootstrap`，当前版本 **0.3.0**。实际提交与同步状态以 `git log -1`、`git status` 和远端分支为准。验证证据见 [STATUS](STATUS.md)，代码定位见 [INDEX](INDEX.md)，R01–R13 处置见 [修复记录](reviews/2026-11-01-remediation.md)。
+> 最近核对：2026-11-02；维护分支 `codex/bootstrap`，当前版本 **0.3.1**。实际提交与同步状态以 `git log -1`、`git status` 和远端分支为准。验证证据见 [STATUS](STATUS.md)，代码定位见 [INDEX](INDEX.md)，R01–R13 处置见 [修复记录](reviews/2026-11-01-remediation.md)。
 
 ## 项目与维护方向
 
@@ -25,7 +25,8 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 | 外部与图标边界 | 外部反馈默认关闭，读取前台进程 ID，沿用 program_opened 台词组，实际语义是前台切换。食物是程序圆点，不读取 / 移动真实图标。气泡 / 食物整窗输入透明，也从宿主落脚与遮挡集合排除 |
 | 气泡外观 | App 的 BubbleRenderer 对嵌入 PNG 做九宫格缩放，台词独立按 DPI 渲染；BubbleWindow 拥有并释放位图，移动复用，按所在屏工作区定位。统一默认皮肤，未增加角色主题字段；原角色图与正式台词未改 |
 | PNG 与角色 | Core 的 PngImage 只开放受限 PNG，采用 StbImageNext 1.0.0；ImageSharp 已从依赖图移除。三套随包角色仍为 1254×1254 / 单格 418×418，素材未改；cat 只作测试 fixture |
-| 版本与构建 | 版本真源 Directory.Build.props = 0.1.14；构建、publish 与验包脚本从同一文件读取默认值。.sln 为 Core / App / Core.Tests / App.Tests / CharacterValidator 五个项目 |
+| 版本与构建 | 版本真源 Directory.Build.props = 0.3.1；构建、publish 与验包脚本从同一文件读取默认值。.sln 为 Core / App / Core.Tests / App.Tests / CharacterValidator 五个项目 |
+| 界面文案 | 用户可见文字集中在 `UI/Pages/*.cs` 与 `UI/TrayIconHost.cs`；枚举转中文经 `UI/UiText.cs`。新增文案保持「桌宠 / 设置 / 默认值」口径，不再引入“实例”“运行级限制”等实现术语 |
 | 测试隔离 | 完整宿主 smoke 均从构造函数注入临时设置目录，日志也随之隔离；ManagerUiSmoke 不再反射替换已构造的 store。Windows App 测试有独立项目，CI 在 Ubuntu 跑 Core、Windows 跑 Core + App 并编译 smoke，不执行桌面验收 |
 
 ## 当前验证摘要

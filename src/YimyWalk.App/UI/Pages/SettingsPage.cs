@@ -17,17 +17,17 @@ internal sealed class SettingsPage : ManagerPage
     public SettingsPage(AppHost host) : base(host)
     {
         var layout = CreateRootLayout();
-        AddHeading(layout, "设置", "应用级选项自动保存；单只桌宠覆盖不会出现在这里。");
+        AddHeading(layout, "设置", "这里设置所有桌宠的默认值。");
         var card = UiTheme.CreateCard();
         card.Dock = DockStyle.Top;
         card.Height = 264;
-        var cardTitle = new Label { Text = "应用外观与启动行为", AutoSize = true, Font = UiTheme.SectionFont, Dock = DockStyle.Top };
+        var cardTitle = new Label { Text = "显示与行为", AutoSize = true, Font = UiTheme.SectionFont, Dock = DockStyle.Top };
         var grid = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, Padding = new Padding(0, UiTheme.Space12, 0, 0) };
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58));
-        AddGridRow(grid, "桌宠显示缩放", _scale, "0.1–8.0；修改后立即应用，连续调整会合并保存。");
-        AddGridRow(grid, "新建桌宠所在显示器", _display, "跟随系统或选择当前显示器；只影响后续创建位置。");
-        AddGridRow(grid, "允许落到可见窗口顶部", _landing, "开启后，桌宠可以落在其他可见窗口顶部；不影响拖拽和重力。");
+        AddGridRow(grid, "桌宠显示缩放", _scale, "0.1–8.0，修改后立即生效。");
+        AddGridRow(grid, "新桌宠出现的位置", _display, "选择桌宠出现的显示器。");
+        AddGridRow(grid, "允许落到可见窗口顶部", _landing, "桌宠会停在窗口上边缘并沿边行走。");
         card.Controls.Add(grid);
         card.Controls.Add(cardTitle);
         AddRow(layout, card);
@@ -54,8 +54,6 @@ internal sealed class SettingsPage : ManagerPage
             Host.SetPreferredDisplay(choice.Id);
         };
         _landing.CheckedChanged += (_, _) => { if (!_syncing) Host.WindowLandingEnabled = _landing.Checked; };
-        _landing.CheckedText = "开";
-        _landing.UnCheckedText = "关";
     }
 
     public override string PageTitle => "设置";
@@ -68,15 +66,7 @@ internal sealed class SettingsPage : ManagerPage
             _scale.Value = (decimal)Host.GlobalScale;
             _landing.Checked = Host.WindowLandingEnabled;
             RefreshDisplaysIfNeeded();
-            var status = Host.SettingsSaveState switch
-            {
-                SettingsSaveState.Applied => "已应用，保存中",
-                SettingsSaveState.Saving => "保存中",
-                SettingsSaveState.Saved => "已保存",
-                SettingsSaveState.Failed => "已应用于本次运行，保存失败",
-                _ => Host.SettingsSaveState.ToString()
-            };
-            _status.Text = $"全局设置：{status}";
+            _status.Text = $"设置：{UiText.SaveStateLabel(Host.SettingsSaveState)}";
             _retry.Enabled = Host.SettingsSaveState == SettingsSaveState.Failed;
             _diagnostic.Text = Host.SettingsSaveError is { Length: > 0 } error
                 ? $"保存错误：{error}"

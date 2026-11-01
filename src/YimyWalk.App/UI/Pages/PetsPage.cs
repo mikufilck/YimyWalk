@@ -23,7 +23,7 @@ internal sealed class PetsPage : ManagerPage
     private readonly Label _detailMeta = UiTheme.CreateMutedLabel();
     private readonly Label _runtime = UiTheme.CreateBodyLabel();
     private readonly Label _operation = UiTheme.CreateMutedLabel();
-    private readonly Label _saveNote = UiTheme.CreateMutedLabel("单只设置仅在本次运行中有效，重启后恢复默认。");
+    private readonly Label _saveNote = UiTheme.CreateMutedLabel("这些设置重启后失效。");
     private readonly Label _walkSource = UiTheme.CreateBodyLabel();
     private readonly Label _dialogueSource = UiTheme.CreateBodyLabel();
     private readonly Label _activitySource = UiTheme.CreateBodyLabel();
@@ -45,7 +45,7 @@ internal sealed class PetsPage : ManagerPage
     private readonly AntdUI.InputNumber _windowJumpDesire = UiTheme.CreateInputNumber(0m, 100m, 1m, 0, 90);
     private readonly AntdUI.Button _remove = UiTheme.CreateButton("删除选中");
     private readonly AntdUI.Button _feed = UiTheme.CreateButton("喂食");
-    private readonly AntdUI.Button _reset = UiTheme.CreateButton("恢复跟随互动默认值");
+    private readonly AntdUI.Button _reset = UiTheme.CreateButton("恢复默认");
     private readonly CharacterFramePreview _preview;
     private Guid? _editingId;
     private bool _syncing;
@@ -75,7 +75,7 @@ internal sealed class PetsPage : ManagerPage
         // the remaining page height instead of staying at its 430px minimum.
         layout.Dock = DockStyle.Fill;
         layout.AutoSize = false;
-        AddHeading(layout, "桌宠", "管理当前运行实例；这里的单只设置不会改写全局默认。");
+        AddHeading(layout, "桌宠", "选择桌宠，调整它这一次的设置。");
         var split = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, MinimumSize = new Size(0, 430), ColumnCount = 2, RowCount = 1 };
         split.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
         split.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58));
@@ -111,7 +111,7 @@ internal sealed class PetsPage : ManagerPage
         _remove.Click += (_, _) =>
         {
             if (_editingId is not { } id) return;
-            _operation.Text = Host.RemovePet(id) ? "已删除选中实例。" : "目标已不存在，已同步列表。";
+            _operation.Text = Host.RemovePet(id) ? "已删除。" : "实例已不存在。";
             RefreshFromHost();
         };
         _feed.Click += (_, _) => { if (_editingId is { } id) Host.FeedPet(id); };
@@ -238,13 +238,13 @@ internal sealed class PetsPage : ManagerPage
                 {
                     row = new ListViewItem(item.InstanceId.ToString("N")[..8]) { Tag = item.InstanceId };
                     row.SubItems.Add(item.RoleName);
-                    row.SubItems.Add(item.State.ToString());
+                    row.SubItems.Add(UiText.PetStateLabel(item.State));
                     _list.Items.Insert(index, row);
                 }
                 else
                 {
                     if (row.SubItems[1].Text != item.RoleName) row.SubItems[1].Text = item.RoleName;
-                    if (row.SubItems[2].Text != item.State.ToString()) row.SubItems[2].Text = item.State.ToString();
+                    if (row.SubItems[2].Text != UiText.PetStateLabel(item.State)) row.SubItems[2].Text = UiText.PetStateLabel(item.State);
                 }
             }
             _empty.Visible = desired.Length == 0;
@@ -298,7 +298,7 @@ internal sealed class PetsPage : ManagerPage
         _editingId = pet?.InstanceId;
         _detailTitle.Text = pet is null ? "未选择桌宠" : pet.Definition.DisplayName;
         _detailMeta.Text = pet is null ? "从左侧列表选择运行实例。" : $"实例 {pet.InstanceId.ToString("N")[..8]}";
-        _runtime.Text = pet is null ? string.Empty : $"状态：{pet.State} · 饥饿：{pet.Hunger:0.0}\n位置：{pet.Position.X:0}, {pet.Position.Y:0}";
+        _runtime.Text = pet is null ? string.Empty : $"状态：{UiText.PetStateLabel(pet.State)} · 饥饿：{pet.Hunger:0.0}\n位置：{pet.Position.X:0}, {pet.Position.Y:0}";
         _preview.ShowIdleFrame(pet?.Definition);
         _remove.Enabled = _feed.Enabled = _reset.Enabled = pet is not null;
         _walkOverride.Enabled = _dialogueOverride.Enabled = _activityMode.Enabled = pet is not null;
