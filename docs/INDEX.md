@@ -334,3 +334,14 @@ CI 只覆盖 Ubuntu 上的 restore/build/test；App 的 `EnableWindowsTargeting`
 - **测试项目**：`tests/YimyWalk.App.Tests`（net8.0-windows）覆盖架构铁律、气泡渲染、角色权限、宿主隔离、渲染预算、设置存储与采样。
 - **版本与发布**：版本真源 `Directory.Build.props` = **0.3.0**；`PACKAGE PASS VERSION=0.3.0 FILES=15 CHECKSUMS=14`。
 - **随包角色**：两个咿米角色新增 `character.json`（`idleFrames [0]`、`walkFrames [3,4,5,4]`、`walkStridePixels 100`、`sampling smooth`、`anchor.y 1.0`），`sprite.png` 原始字节未改。
+
+---
+
+## 14. 2026-11-02 增量（0.3.1）
+
+- **角色格式**：新增 `behavior.walkSecondsMin` / `walkSecondsMax`（默认 3–10 秒），控制一次自主行走的持续时间；`idleSecondsMin` / `idleSecondsMax` 改为进入 Idle 时随机取一次。
+- **核心行为**：`PetInstance.StartWalking` 增加可选时长；`PetEngine` 在 `Walk` 状态到时回到 `Idle`；跟随虚拟食物不受时长限制（`WalkTargetSeconds = 0`）。
+- **窗口落脚**：`WindowSurfaceResolver` 的遮挡体判定排除系统壳层/覆盖窗口（`unsafeSurface`）。
+- **虚拟食物**：`Available` 8 秒过期，`Claimed` 延长到 60 秒，认领/释放时重置计时。
+- **测试**：Core 新增 `BehaviorPacingTests`；当前 **Core 187 + App 24** 全部通过。
+- **真机**：`desktop-smoke -Landing -Rounds 1 -Role slime` 通过（`WINDOW LANDING TOP=300 PET=300 PASS`）。

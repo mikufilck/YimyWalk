@@ -191,6 +191,12 @@ public sealed class PetEngine
                     break;
                 IntegrateWalking(pet, area, Surface.HorizontalTravelBounds, delta);
                 TryAutonomousJump(pet, selectedSurface.SourceId);
+                if (pet.State == PetState.Walk && pet.WalkTargetSeconds > 0
+                    && pet.StateTime >= pet.WalkTargetSeconds)
+                {
+                    pet.State = PetState.Idle;
+                    pet.Velocity = Vector2.Zero;
+                }
                 break;
             case PetState.Idle:
                 pet.Velocity = Vector2.Zero;
@@ -200,13 +206,20 @@ public sealed class PetEngine
                     * (1f + Math.Clamp((pet.Boredom - 0.5f) * 2f, 0f, 1f));
                 var idleMin = Math.Max(0, pet.Definition.Defaults.IdleSecondsMin) / activityRate;
                 var idleMax = Math.Max(idleMin, pet.Definition.Defaults.IdleSecondsMax) / activityRate;
-                if (pet.BehaviorOverrides.ResolveWalkEnabled(DefaultWalkEnabled)
-                    && (pet.StateTime >= idleMax
-                        || (pet.StateTime >= idleMin && _random.NextDouble() >= 0.25)))
+                if (pet.BehaviorOverrides.ResolveWalkEnabled(DefaultWalkEnabled))
                 {
-                    // The random choice is deliberately infrequent and deterministic
-                    // under a test source; the third row is never an animation loop.
-                    pet.StartWalking(_random.Next(0, 2) == 0 ? FacingDirection.Left : FacingDirection.Right);
+                    // Pick the wait once on state entry so the pause is uniformly
+                    // distributed instead of being re-rolled on every tick.
+                    if (pet.IdleTargetSeconds <= 0)
+                        pet.IdleTargetSeconds = RandomDelay(idleMin, idleMax);
+                    if (pet.StateTime >= pet.IdleTargetSeconds)
+                    {
+                        var walkMin = Math.Max(0, pet.Definition.Defaults.WalkSecondsMin) / activityRate;
+                        var walkMax = Math.Max(walkMin, pet.Definition.Defaults.WalkSecondsMax) / activityRate;
+                        pet.StartWalking(
+                            _random.Next(0, 2) == 0 ? FacingDirection.Left : FacingDirection.Right,
+                            RandomDelay(walkMin, walkMax));
+                    }
                 }
                 break;
             case PetState.Eat:

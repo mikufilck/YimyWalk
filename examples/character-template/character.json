@@ -13,6 +13,8 @@
   "behavior": {
     "idleSecondsMin": 2,
     "idleSecondsMax": 8,
+    "walkSecondsMin": 3,
+    "walkSecondsMax": 10,
     "hungerIncreasePerMinute": 0.01,
     "speechCooldownSeconds": 45
   },

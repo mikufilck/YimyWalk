@@ -30,7 +30,9 @@ public sealed record CharacterDefaults(
     float IdleSecondsMin,
     float IdleSecondsMax,
     float SpeechCooldownSeconds,
-    float HungerIncreasePerMinute = 0.01f);
+    float HungerIncreasePerMinute = 0.01f,
+    float WalkSecondsMin = 3f,
+    float WalkSecondsMax = 10f);
 
 public sealed record CharacterAnimation(float IdleFps, float WalkFps)
 {

@@ -195,7 +195,7 @@ public static class CharacterLoader
             1f,
             new Anchor(cellWidth * 0.5f, cellHeight * 0.9f),
             new CharacterMovement(60f, 450f, 1500f, 1500f),
-            new CharacterDefaults(2f, 8f, 45f, 0.01f),
+            new CharacterDefaults(2f, 8f, 45f, 0.01f, 3f, 10f),
             new CharacterAnimation(3f, 8f), SpriteSampling.Nearest);
 
         var path = Path.Combine(directory, "character.json");
@@ -282,11 +282,15 @@ public static class CharacterLoader
             var idleMax = ReadBoundedPositive(behaviorElement, "idleSecondsMax", 0f, MaxBehaviorSeconds, directory) ?? characterDefaults.IdleSecondsMax;
             var cooldown = ReadBoundedPositive(behaviorElement, "speechCooldownSeconds", 0f, MaxBehaviorSeconds, directory) ?? characterDefaults.SpeechCooldownSeconds;
             var hunger = ReadFinite(behaviorElement, "hungerIncreasePerMinute", directory) ?? characterDefaults.HungerIncreasePerMinute;
+            var walkMin = ReadBoundedPositive(behaviorElement, "walkSecondsMin", 0f, MaxBehaviorSeconds, directory) ?? characterDefaults.WalkSecondsMin;
+            var walkMax = ReadBoundedPositive(behaviorElement, "walkSecondsMax", 0f, MaxBehaviorSeconds, directory) ?? characterDefaults.WalkSecondsMax;
             if (hunger is < 0 or > 1)
                 throw new CharacterLoadException(directory, "hungerIncreasePerMinute must be between 0 and 1");
             if (idleMax < idleMin)
                 throw new CharacterLoadException(directory, "idleSecondsMax must be at least idleSecondsMin");
-            characterDefaults = new CharacterDefaults(idleMin, idleMax, cooldown, hunger);
+            if (walkMax < walkMin)
+                throw new CharacterLoadException(directory, "walkSecondsMax must be at least walkSecondsMin");
+            characterDefaults = new CharacterDefaults(idleMin, idleMax, cooldown, hunger, walkMin, walkMax);
         }
 
         return new CharacterConfig(displayName, scale, anchor, movement, characterDefaults, animation, sampling);

@@ -29,6 +29,7 @@ public sealed class VirtualFoodTarget
 public sealed class VirtualFoodSystem
 {
     private const double TargetLifetimeSeconds = 8;
+    private const double ClaimedLifetimeSeconds = 60;
     private const double ConsumeLifetimeSeconds = 0.35;
     private readonly List<VirtualFoodTarget> _targets = new();
 
@@ -59,6 +60,7 @@ public sealed class VirtualFoodSystem
         if (_targets.Any(item => item.State == VirtualFoodState.Claimed && item.ClaimantId == pet.InstanceId)) return false;
         target.State = VirtualFoodState.Claimed;
         target.ClaimantId = pet.InstanceId;
+        target.AgeSeconds = 0;
         pet.FoodTargetPosition = target.Position;
         return true;
     }
@@ -91,6 +93,7 @@ public sealed class VirtualFoodSystem
     {
         target.State = VirtualFoodState.Available;
         target.ClaimantId = null;
+        target.AgeSeconds = 0;
         if (pet is not null) pet.FoodTargetPosition = null;
     }
 
@@ -103,7 +106,10 @@ public sealed class VirtualFoodSystem
         foreach (var target in _targets.ToArray())
         {
             target.AgeSeconds += delta;
-            if (target.State != VirtualFoodState.Consumed && target.AgeSeconds >= TargetLifetimeSeconds)
+            var lifetime = target.State == VirtualFoodState.Claimed
+                ? ClaimedLifetimeSeconds
+                : TargetLifetimeSeconds;
+            if (target.State != VirtualFoodState.Consumed && target.AgeSeconds >= lifetime)
             {
                 if (byId.TryGetValue(target.ClaimantId ?? Guid.Empty, out var expiredPet)) expiredPet.FoodTargetPosition = null;
                 _targets.Remove(target);

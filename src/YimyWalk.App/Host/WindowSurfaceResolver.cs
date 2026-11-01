@@ -101,7 +101,7 @@ internal sealed class WindowSurfaceResolver : IDisposable
                     IsStale: false,
                     IsOccluded: false,
                     ZOrder: zOrder++,
-                    IsOcclusionBlocker: !hostExcluded && !isBackgroundShell && !tooSmall,
+                    IsOcclusionBlocker: !hostExcluded && !unsafeSurface && !isBackgroundShell && !tooSmall,
                     IsMaximized: isMaximized));
                 return true;
             }, IntPtr.Zero);

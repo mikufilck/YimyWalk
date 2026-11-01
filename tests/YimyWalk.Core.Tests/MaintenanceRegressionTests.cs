@@ -134,7 +134,9 @@ public sealed class MaintenanceRegressionTests
 
     private sealed class FixedRandom : IRandomSource
     {
-        public double NextDouble() => 0;
+        // Idle/walk durations are uniformly sampled from the configured range,
+        // so the midpoint keeps the comparison independent of the bounds.
+        public double NextDouble() => 0.5;
         public int Next(int minInclusive, int maxExclusive) => minInclusive;
     }
 }

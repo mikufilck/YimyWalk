@@ -34,10 +34,16 @@ public sealed class PetInstance
             _state = value;
             StateTime = 0;
             AnimationTime = 0;
+            WalkTargetSeconds = 0;
+            IdleTargetSeconds = 0;
         }
     }
     public float StateTime { get; internal set; }
     public float AnimationTime { get; internal set; }
+    /// <summary>Autonomous walk duration; 0 means no timed stop (e.g. following food).</summary>
+    internal float WalkTargetSeconds { get; set; }
+    /// <summary>Randomized idle duration for the current Idle state; 0 means pick on the next tick.</summary>
+    internal float IdleTargetSeconds { get; set; }
     public bool IsDragging => State == PetState.Dragged;
     internal Vector2? FoodTargetPosition { get; set; }
     public float Hunger { get; private set; }
@@ -83,12 +89,13 @@ public sealed class PetInstance
         return ScaleOverride ?? global;
     }
 
-    public void StartWalking(FacingDirection direction)
+    public void StartWalking(FacingDirection direction, float durationSeconds = 0)
     {
         Facing = direction;
         State = PetState.Walk;
         StateTime = 0;
         Velocity = Vector2.Zero;
+        WalkTargetSeconds = float.IsFinite(durationSeconds) && durationSeconds > 0 ? durationSeconds : 0;
     }
 
     public void StartJump()

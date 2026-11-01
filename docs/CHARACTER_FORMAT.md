@@ -55,6 +55,8 @@ Characters/<id>/
   "behavior": {
     "idleSecondsMin": 2,
     "idleSecondsMax": 8,
+    "walkSecondsMin": 3,
+    "walkSecondsMax": 10,
     "hungerIncreasePerMinute": 0.01,
     "speechCooldownSeconds": 45
   },
@@ -89,6 +91,12 @@ Characters/<id>/
 | `rendering.sampling` | `nearest` / `smooth` | `nearest` | `smooth` 使用双三次缩放，适合手绘或抗锯齿素材；`nearest` 保留像素画锐利边缘 |
 
 序列必须是整数数组：空数组、超过 64 项、越界索引、浮点数或字符串都会让角色加载失败并给出明确错误。`sampling` 只接受两个小写取值。
+
+### 行走与待机节奏
+
+- `behavior.idleSecondsMin` / `idleSecondsMax`：发呆等待时长在区间内**随机取一次**，而不是每帧重掷；缺省 2–8 秒。
+- `behavior.walkSecondsMin` / `walkSecondsMax`：一次自主行走的持续时间在区间内随机，到时自动回到发呆；缺省 **3–10 秒**。跟随虚拟食物时不受该时长限制。
+- `walkSecondsMax` 不能小于 `walkSecondsMin`，两者都会除以全局/实例活跃度倍率。
 
 随包的两个咿米角色使用 `idleFrames: [0]`、`walkFrames: [3,4,5,4]`、`walkStridePixels: 100`、`sampling: smooth` 与 `anchor.y: 1.0`（脚底贴单元格下沿）；`sprite.png` 原始字节未改。只有 `sprite.png` 的角色仍然完全兼容，行为与 0.1.x 一致。
 

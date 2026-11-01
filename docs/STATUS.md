@@ -1,3 +1,29 @@
+# 2026-11-02 行为节奏修正与窗口落脚/食物核验
+
+**根因**（均已核对源码，并用 `git show 7a0fb13` 确认不是 0.3.0 引入）：
+
+1. `PetState.Walk` 没有任何时长出口，自主起步后会无限行走。
+2. `Idle` 在达到 `idleSecondsMin` 后每个模拟帧有 75% 概率起步，约 2 秒后几乎必然出发，`idleSecondsMax` 实际失效。
+3. 用户设置 `windowLandingEnabled=false`，窗口落脚默认关闭；另发现 `WindowSurfaceResolver` 把 `IsExcluded` 的系统壳层/覆盖窗口仍标记为遮挡体，可能把普通窗口全部判为被遮挡。
+4. 虚拟食物对已认领目标也按 8 秒过期，远距离宠物来不及走到。
+
+**修正**：
+
+- 新增 `behavior.walkSecondsMin` / `walkSecondsMax`（Core `CharacterDefaults`，默认 3–10 秒）；`PetInstance.StartWalking` 接受时长，`PetEngine` 到时回到 Idle；食物跟随显式清除时长限制。
+- Idle 改为进入状态时在区间内随机一次等待时长，不再逐帧重掷。
+- `WindowSurfaceResolver` 的遮挡体判定排除 `unsafeSurface`。
+- 食物：`Available` 8 秒、`Claimed` 60 秒；认领/释放时重置计时。
+
+**验证**：
+
+- ② 构建通过：`dotnet build YimyWalk.sln -c Release` → **0 警告 / 0 错误**。
+- ③ 测试通过：Core **187/187**（新增 `BehaviorPacingTests` 3 项）、App **24/24**。
+- ④ Windows 桌面已验证：`scripts/desktop-smoke.ps1 -Landing -Rounds 1 -Role slime` 退出码 0，输出 `WINDOW LANDING TOP=300 PET=300 PASS`、`WINDOW LANDING CLOSE_REFALL_Y=325.7 PASS`；1/10/50/100 创建与清空后均为 `ACTIVE=0 WINDOWS=0 CACHE=0`。
+
+**未验证边界**：多显示器/DPI 矩阵、负坐标、物理拔插与长期资源趋势仍未执行；虚拟食物的实际手感未做真机主观验收。
+
+**注意**：窗口落脚仍是**设置项**（默认关闭）。当前用户设置为 `false`，需在管理器「设置」页勾选「允许宠物落到可见窗口顶部」才会生效；这不是功能失效。
+
 # 2026-11-01 逐角色动画播放配置与 0.3.0 发布
 
 **代码已实现**：`character.json` 新增 `animation.idleFrames` / `animation.walkFrames` / `animation.walkStridePixels` 与 `rendering.sampling`；`CharacterAnimation` 持有可选帧序列（1–64 项，空数组/越界/非整数直接拒绝），`SpriteSampling` 贯通 Core 数据、App 渲染与预览。设置 `walkStridePixels` 后行走动画按实际位移推进，跨屏 wrap 只计真实位移；状态切换重置动画相位；`Apex` 至少保持 0.08 s；蓄力阶段使用起跳帧 6。两个随包咿米角色新增 `character.json`（`idleFrames [0]`、`walkFrames [3,4,5,4]`、`walkStridePixels 100`、`sampling smooth`、`anchor.y 1.0`），`sprite.png` 原始字节未改。新增 `AnimationRegressionTests`、`SpriteSamplingTests` 与 `ManagerUiSmoke --animation-audit`。

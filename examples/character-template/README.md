@@ -18,7 +18,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-character.p
 
 - `animation.idleFrames` / `animation.walkFrames`：自定义 0–2 与 3–5 范围内的播放顺序，长度 1–64；
 - `animation.walkStridePixels`：一个完整行走循环对应的原图像素位移，设置后动画按位移而不是时间推进；
-- `rendering.sampling`：`nearest`（像素画，默认）或 `smooth`（双三次，适合手绘素材）。
+- `rendering.sampling`：`nearest`（像素画，默认）或 `smooth`（双三次，适合手绘素材）；
+- `behavior.walkSecondsMin` / `walkSecondsMax`：一次自主行走的持续时间区间（默认 3–10 秒），到时自动回到发呆。
 
 完整字段与校验规则见 [CHARACTER_FORMAT](../../docs/CHARACTER_FORMAT.md)。
 

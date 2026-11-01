@@ -19,7 +19,7 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 | 资源所有权 | 定义通过 DefinitionLease 共享；渲染窗口与预览必须持有 SurfaceLease，先释放 handle 再释放定义使用权。禁止拿到裸 surface 后丢弃 handle |
 | 像素与缓存 | 最终缩放统一走 `PetLimits.EffectiveScale`，单边 ≤1024、总像素 ≤1,048,576；缓存像素 + alpha 预算 64 MiB。预算紧张保留上一帧并显示诊断，不代表整个进程内存上限 |
 | 食物运动 | `PetSession.VirtualFood` 与物理同一个 Tick 推进；暂停时不推进。VirtualFoodSystem 只提供目标与消费，不写位置；PetEngine 遵守实例走动设置并按角色速度接近，不能直接在宿主另跑食物 Tick |
-| 行为 | 行走上限统一 2000 px/s；高无聊值有界缩短 Idle，不绕过走动开关。全局缩放与实例覆盖的合成结果仍包含角色倍率和 DPI，超过最终像素预算会限制呈现大小 |
+| 行为 | 行走上限统一 2000 px/s；发呆等待在 `idleSecondsMin`–`idleSecondsMax` 随机一次，自主行走受 `walkSecondsMin`–`walkSecondsMax` 限制（默认 3–10 秒）且到时回到发呆；跟随食物不受行走时长限制。全局缩放与实例覆盖的合成结果仍包含角色倍率和 DPI，超过最终像素预算会限制呈现大小 |
 | 动画播放 | `character.json` 的 `animation.idleFrames` / `walkFrames` 覆盖默认序列；有 `walkStridePixels` 时按实际位移推进，否则按时间；`rendering.sampling` 控制最近邻 / 双三次。状态切换重置相位，Apex 至少 0.08 s |
 | 设置 | `%LocalAppData%/YimyWalk/settings.json` + `.bak` / `.tmp`；只用合法主文件轮换备份。全局设置与气泡总闸持久化，实例覆盖 / 位置 / 数量不持久化 |
 | 外部与图标边界 | 外部反馈默认关闭，读取前台进程 ID，沿用 program_opened 台词组，实际语义是前台切换。食物是程序圆点，不读取 / 移动真实图标。气泡 / 食物整窗输入透明，也从宿主落脚与遮挡集合排除 |
@@ -35,8 +35,8 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 | 档位 | 结果 |
 | --- | --- |
 | ① 代码已实现 | R01–R13 修正与咿米气泡皮肤 / 透明窗口接线；原始需求与历史设计不改 |
-| ② 构建通过 | 本地 SDK 8.0.426；本次 Release 构建 0 警告 / 0 错误；0.3.0 自包含发布与验包通过（`PACKAGE PASS VERSION=0.3.0 FILES=15 CHECKSUMS=14`），位于 artifacts/publish/yimywalk-win-x64 |
-| ③ Core 测试通过 | 本次 Core 184 / App 24 均通过，0 失败、0 跳过；含动画序列 / 采样 / 状态相位回归 |
+| ② 构建通过 | 本地 SDK 8.0.426；本次 Release 构建 0 警告 / 0 错误；0.3.1 自包含发布与验包通过 |
+| ③ Core 测试通过 | 本次 Core 187 / App 24 均通过，0 失败、0 跳过；含行走/待机节奏与食物寿命回归 |
 | ④ Windows 桌面 | 单屏 2560×1600、144 DPI / 150%：气泡透明角/正文/边界/不抢焦点/跨进程点击穿透、完整 input smoke，以及动画审计（两角色行走序列 3,4,5,4,3、CHARGE=6/JUMP=6,7,8/LAND=0/EAT=0、FOOT_CLIP=NONE）均有记录。以上为 2026-11-01 既有记录；多屏、负坐标、拔插、睡眠唤醒与长期压力仍未验证 |
 
 **Windows 桌面未验证**：至少两块扩展显示器的矩阵、真实负坐标布局、物理拔插、睡眠唤醒、完整 OS DPI 组合和长时间资源趋势。UI 渲染的 96/120/144/192 DPI 像素计算不是操作系统 DPI 切换验收。短测试清空的 GDI 回落不等同于长期无泄漏。
