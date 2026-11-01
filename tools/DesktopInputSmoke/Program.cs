@@ -593,7 +593,11 @@ static void VerifyPassiveWindowsAcrossProcesses(Assembly app, string sandbox)
             window.Show();
             Pump(60);
             clicked.Reset();
-            Native.SetCursorPos(point.X + 5, point.Y + 5);
+            // Click the visible body, not a newly transparent ornament margin.
+            var hit = typeName == "BubbleWindow"
+                ? new Point(window.Left + window.Width / 2, window.Top + window.Height / 2)
+                : new Point(point.X + 5, point.Y + 5);
+            Native.SetCursorPos(hit.X, hit.Y);
             var before = Native.GetForegroundWindow();
             Native.MouseClick();
             Pump(120);

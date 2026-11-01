@@ -75,3 +75,9 @@ Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/desktop-smoke.p
 App.Tests 只在 Windows 执行；包含设置原子 / 备用写入路径、渲染预算与 GDI 失败、单调日志限频、实际临时文件 ACL 拒读、宿主隔离。Core 在 Ubuntu / Windows 均可执行。CI 的 Windows job 运行这些适配层测试并编译四个 smoke；CI 不运行真实桌面输入。
 
 本轮实际结果与未验证硬件边界见 [修复记录](reviews/2026-11-01-remediation.md) 和 STATUS。`--preview-pixels` 只覆盖 UI 渲染尺寸计算，不代表 OS DPI 切换已经测试。
+
+## 咿米气泡样式复核
+
+`ManagerUiSmoke --bubble-skin` 生成 96/120/144/192 DPI 的运行时文字样张和包含原角色的预览，在当前真实桌面显示逐像素 Alpha 气泡，并仅截取工具自己的不透明背景窗口，检查透明角、白色正文区和显示前后前台窗口未变化；另验证当前屏幕顶部 / 右侧边界。命令与素材来源见 [视觉说明](YIMY_VISUAL_STYLE.md)。
+
+`BubbleRenderingTests` 检查 Alpha、边角不随文字长度伸缩、换行 / 极长文字限高和负坐标工作区定位；输入 smoke 点击气泡可见正文区域，验证真实跨进程穿透与焦点。绘制样张和合成负坐标测试不能代替真实多显示器与 OS DPI 切换验收。

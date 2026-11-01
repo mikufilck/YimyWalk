@@ -1,24 +1,26 @@
-using YimyWalk.App.Host;
+using YimyWalk.App.Rendering;
 
 namespace YimyWalk.App.Windows;
 
 internal sealed class BubbleWindow : Form
 {
-    private readonly Label _label;
+    private readonly string _text;
+    private BubbleArtwork? _artwork;
+    private int _renderedDpi;
+    private Size _available;
+    private Rectangle? _petBounds;
 
     public BubbleWindow(string text, Point anchor)
     {
+        _text = text;
         FormBorderStyle = FormBorderStyle.None;
+        AutoScaleMode = AutoScaleMode.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         TopMost = true;
-        AutoSize = true;
-        BackColor = Color.LemonChiffon;
-        Opacity = 0.99;
-        Padding = new Padding(7, 4, 7, 4);
-        _label = new Label { AutoSize = true, MaximumSize = new Size(240, 0), Text = text, ForeColor = Color.Black };
-        Controls.Add(_label);
         Location = anchor;
+        try { Rebuild(DeviceDpi, Screen.FromPoint(anchor).WorkingArea.Size); }
+        catch { Dispose(); throw; }
     }
 
     protected override bool ShowWithoutActivation => true;
@@ -46,6 +48,54 @@ internal sealed class BubbleWindow : Form
         base.WndProc(ref message);
     }
 
-    public void MoveAbove(Rectangle petBounds)
-        => Location = new Point(petBounds.Left, Math.Max(0, petBounds.Top - Height - 4));
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        Rebuild(DeviceDpi, Screen.FromRectangle(_petBounds ?? Bounds).WorkingArea.Size);
+        Present();
+    }
+
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        base.OnDpiChanged(e);
+        Rebuild(e.DeviceDpiNew, Screen.FromRectangle(_petBounds ?? Bounds).WorkingArea.Size);
+        if (_petBounds is { } pet) PositionAbove(pet, e.DeviceDpiNew);
+        Present();
+    }
+
+    public void MoveAbove(Rectangle petBounds, int dpi)
+    {
+        _petBounds = petBounds;
+        var changed = Rebuild(dpi, Screen.FromRectangle(petBounds).WorkingArea.Size);
+        PositionAbove(petBounds, dpi);
+        if (changed) Present();
+    }
+
+    private bool Rebuild(int dpi, Size available)
+    {
+        if (_artwork is not null && dpi == _renderedDpi && available == _available) return false;
+        var next = BubbleRenderer.Render(_text, dpi, available);
+        var previous = _artwork;
+        _artwork = next;
+        _renderedDpi = dpi;
+        _available = available;
+        ClientSize = next.Pixels.Size;
+        previous?.Dispose();
+        return true;
+    }
+
+    private void PositionAbove(Rectangle petBounds, int dpi)
+        => Location = BubbleRenderer.Place(petBounds, Size, Screen.FromRectangle(petBounds).WorkingArea, dpi);
+
+    private void Present()
+    {
+        if (IsHandleCreated && !IsDisposed && _artwork is not null)
+            LayeredWindowRenderer.Present(Handle, _artwork.Pixels, Location);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) { _artwork?.Dispose(); _artwork = null; }
+        base.Dispose(disposing);
+    }
 }

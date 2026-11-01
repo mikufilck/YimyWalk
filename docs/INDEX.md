@@ -120,11 +120,12 @@ graph TD
 | `Host/SystemRandomSource.cs` | `Random.Shared` → `IRandomSource` |
 | `Rendering/FrameSurfaceCache.cs` | 按 (定义, 帧, 镜像, 缩放) 缓存位图 + Alpha 掩码；每个 `RenderedSurface` 持定义租约，调用方必须持 `SurfaceLease`；缓存 64 MiB，按真实尺寸建键并淘汰未用项，在用引用保持有效 |
 | `Rendering/LayeredWindowRenderer.cs` | 分步检查句柄与 `UpdateLayeredWindow`；失败仍释放已获得资源，错误由宿主诊断处理 |
+| `Rendering/BubbleRenderer.cs` | 咿米皮肤九宫格、独立文字、按 DPI / 工作区限宽换行与定位；`BubbleArtwork` 由窗口负责释放 |
 | `Settings/SettingsStore.cs` | `%LocalAppData%\YimyWalk\settings.json`（+`.bak`/`.tmp`）、`File.Replace` 原子替换、主文件损坏回退备份 |
 | `Settings/SettingsSaveCoordinator.cs` | 300 ms 合并写入；暴露 Applied/Saving/Saved/Failed + Error + Retry |
 | `Startup/StartupFailure.cs` | MessageBox + `startup-error.log`；退出码 2（已知诊断）/ 1（未知异常） |
 | `Windows/PetWindow.cs` | 每实例一个分层无激活窗口：选帧/呈现、跟踪所在屏 DPI、**Alpha 命中测试**、拖拽与抛掷测速 |
-| `Windows/BubbleWindow.cs` | 气泡窗口：`HTTRANSPARENT` / `MA_NOACTIVATE`，不抢焦点、随宠物移动 |
+| `Windows/BubbleWindow.cs` | 咿米逐像素 Alpha 气泡窗口：整窗穿透 / 不激活，跟随宠物与 DPI，钳制到所在屏工作区 |
 | `Windows/FoodWindow.cs` | 20×20 无激活且整窗输入透明的食物窗口，金色圆点随消耗缩放 |
 | `Windows/NativeMethods.cs` | **唯一 Win32 P/Invoke 集中地** |
 | `UI/ManagerForm.cs` | 主菜单外壳：200 px 侧栏、5 页按需创建并缓存、可见时 200 ms 刷新；启动隐藏，普通关闭隐藏回托盘，显式退出由宿主处理 |
@@ -140,7 +141,7 @@ graph TD
 | `UI/Pages/CharactersPage.cs` | 角色：列表、详情、idle 预览、刷新角色、设为下次创建默认角色 |
 | `UI/Pages/InteractionsPage.cs` | 互动：全局默认（走动/气泡/饥饿/外部反馈/活跃度）+ 气泡总闸（优先级为运行级，设置实际会持久化） |
 | `UI/Pages/SettingsPage.cs` | 设置：全局缩放、首选显示器、窗口顶部落脚、保存状态与重试 |
-| `Resources/` | `yimywalk.ico`、`icon_yimy.png`、`logo.png`（后两者为源素材） |
+| `Resources/` | `yimywalk.ico`、`icon_yimy.png`、`logo.png`；`Dialogue/yimy-bubble.png` 为嵌入的咿米气泡原画 |
 
 ---
 
@@ -177,7 +178,7 @@ graph TD
 
 ### 新增回归与 Windows App 测试
 
-Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / 限制）、`FoodMotionRegressionTests.cs`（暂停 / 覆盖 / 速度 / 消费）、`PngBoundaryTests.cs`（像素往返 / CRC / 截断），`BatchCreationTests.cs` 补充紧凑大请求。
+Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / 限制）、`FoodMotionRegressionTests.cs`（暂停 / 覆盖 / 速度 / 消费）、`PngBoundaryTests.cs`（像素往返 / CRC / 截断），`BatchCreationTests.cs` 补充紧凑大请求。App 的 `BubbleRenderingTests.cs` 验证皮肤透明度、边角不拉伸、文字换行 / 限高、DPI 和负坐标定位。
 
 `tests/YimyWalk.App.Tests/`：`SettingsStoreTests.cs`（两条写入路径的备份保全）、`RenderingTests.cs`（预算 / 引用 / GDI 失败清理）、`ArchitectureTests.cs`（可见性 / P/Invoke / 有限日志）、`HostIsolationTests.cs`（临时设置 / 失败取消）、`CharacterPermissionTests.cs`（实际 ACL 拒读）、`AssemblyInfo.cs`（Windows 资源断言串行化）。
 
@@ -191,12 +192,12 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `tools/DesktopSmoke` | `<rounds 1–20> <role> [landing] [targeted]` | 真实创建/清空 1/10/50/100 窗口，输出 CPU_S/工作集/私有字节/托管堆/句柄/USER/GDI |
 | `tools/DesktopDisplaySmoke` | `<characterRoot> [--rounds 1–100] [--inventory]`；**<2 块扩展显示器 → `UNVERIFIED` + 退出码 2** | 多显示器/DPI 矩阵：每屏生成落地行走跳跃、透明穿透、实体命中、跨屏拖拽 |
 | `tools/DesktopInputSmoke` | 无参数 | 真实鼠标输入 + 主菜单/托盘生命周期 |
-| `tools/ManagerUiSmoke` | `[--baseline]` / `[--preview-pixels]` | 管理界面结构与像素回归 |
+| `tools/ManagerUiSmoke` | `[--baseline]` / `[--preview-pixels]` / `[--bubble-skin]` | 管理界面结构、像素与咿米气泡渲染 / 真机窗口回归 |
 | `tools/GenerateTestCharacters.ps1` | `[-Root <dir>]` | 生成测试用 cat/slime 角色图 |
 
 `ManagerUiSmoke` 没有单独的 PowerShell 包装。先执行 `.tools/dotnet/dotnet.exe build tools/ManagerUiSmoke/ManagerUiSmoke.csproj -c Release -p:Platform=x64`，再在可见桌面执行 `.tools/dotnet/dotnet.exe tools/ManagerUiSmoke/bin/x64/Release/net8.0-windows/ManagerUiSmoke.dll --baseline`；不传参数运行完整模式，`--preview-pixels` 运行像素回归。
 
-只核对源码兼容性时，四个 smoke 项目可分别执行同样的 `dotnet build ... -p:Platform=x64`，无需启动程序。编译不算桌面验收。输入 smoke 使用真实用户设置路径；其隔离边界见 [TESTING](TESTING.md#桌面工具的设置隔离边界)。
+只核对源码兼容性时，四个 smoke 项目可分别执行同样的 `dotnet build ... -p:Platform=x64`，无需启动程序。编译不算桌面验收。完整宿主 smoke 使用注入的临时设置目录；隔离边界见 [TESTING](TESTING.md#桌面工具的设置隔离边界)。`--bubble-skin` 入口不创建 AppHost，不读取用户设置；详见 [气泡样式](YIMY_VISUAL_STYLE.md)。
 
 ### 脚本（`scripts/`）
 
@@ -232,6 +233,7 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `docs/ARCHITECTURE.md` | 当前分层决策、真实类型和资源边界 | 决定代码该放哪一层时读 |
 | `docs/CHARACTER_FORMAT.md` | 角色包格式的**对外契约**（supported / planned 已区分） | 改角色格式或写文档时读 |
 | `docs/TESTING.md` | 验收入口与 Windows 桌面验收矩阵 | 决定"怎么算通过"时读 |
+| `docs/YIMY_VISUAL_STYLE.md` / `docs/artwork/yimy-bubble-prompt.txt` | 咿米主题、气泡原画来源 / hash / 提示词、切图与复核入口 | 改气泡外观或替换皮肤时读 |
 | `docs/UPSTREAM_AUDIT.md` | eSheep 上游审计结论（固定提交、许可、代码路径） | 需要复核上游时读；**在仓库外取源码** |
 | `docs/superpowers/specs/*.md`（6 篇） | 各功能的设计稿（历史） | 追溯某个功能的原始设计意图 |
 | `docs/superpowers/plans/*.md`（13 篇） | 各阶段的实施计划（历史） | 追溯实施步骤与当时的决策 |
@@ -300,7 +302,7 @@ CI 只覆盖 Ubuntu 上的 restore/build/test；App 的 `EnableWindowsTargeting`
 | 显示器 / DPI | `Core/Display/DisplayContracts.cs`、`App/Host/WindowsDisplayAdapter.cs` | `DisplayContractTests`、`docs/STATUS.md`（桌面矩阵结论） |
 | 设置字段 | `Core/Settings/SettingsDocument.cs` | `SettingsDocumentTests`、`App/UI/Pages/SettingsPage.cs`、`SettingsStore` |
 | 资源释放 / 引用计数 | `Core/Resources/DefinitionLease.cs` | `ResourceLifecycleTests` |
-| 气泡 / 台词 | `Core/Simulation/DialogueScheduler.cs`、`Core/Characters/DialogueSet.cs`、`App/Windows/BubbleWindow.cs` | `DialogueSchedulerTests`、UI「互动」页 |
+| 气泡 / 台词 | `Core/Simulation/DialogueScheduler.cs`、`Core/Characters/DialogueSet.cs`、`App/Windows/BubbleWindow.cs`、`App/Rendering/BubbleRenderer.cs` | `DialogueSchedulerTests`、`BubbleRenderingTests`、`ManagerUiSmoke --bubble-skin`、[视觉说明](YIMY_VISUAL_STYLE.md)、UI「互动」页 |
 | 虚拟食物 | `Core/Simulation/VirtualFoodSystem.cs`、`App/Windows/FoodWindow.cs` | `VirtualFoodTests` |
 | 管理界面 | `App/UI/**` | `tools/ManagerUiSmoke`（布局断言 + 像素回归） |
 | Win32 调用 | `App/Windows/NativeMethods.cs` | 检查是否真的被调用（见 §12 死代码清单） |

@@ -27,6 +27,13 @@ The upstream README credits NAudio and several sprite authors. The historical au
 - They are project sample assets and are not copied from the upstream snapshot.
 - The two Yimy sprites were supplied by the project owner on 2026-10-13 with an explicit request to bundle them as starter roles. Their source filenames were `Yimy.jpg` and `Yimy_no.jpg`, but both files contain transparent PNG data. They are copied byte-for-byte as `sprite.png`; no image conversion or generated artwork is involved.
 
+## Yimy speech-bubble artwork
+
+- `src/YimyWalk.App/Resources/Dialogue/yimy-bubble.png` is original project UI artwork generated with the built-in OpenAI image generation tool on 2026-11-01 under the project owner's explicit authorization.
+- The owner's reference screenshot supplied the broad bubble silhouette; the new image is not a crop or reproduction of that screenshot. Existing owner-supplied Yimy sprites supplied visual context and were not modified.
+- Public character facts and the blush representative color were consulted through the Moegirl entry and its readable mirror. No encyclopedia image, article text, third-party sprite or font file is bundled for this change. Runtime text uses an installed Windows font.
+- Provenance, source links, file hash and the complete generation prompt are recorded in [`docs/YIMY_VISUAL_STYLE.md`](docs/YIMY_VISUAL_STYLE.md).
+
 ## AntdUI 2.4.12
 
 - Package: `AntdUI` 2.4.12

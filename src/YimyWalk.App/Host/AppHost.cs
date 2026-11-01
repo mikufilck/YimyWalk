@@ -526,7 +526,7 @@ internal sealed class AppHost : ApplicationContext
         foreach (var bubble in _dialogue.Active)
             if (_bubbleWindows.TryGetValue(bubble.Id, out var bubbleWindow)
                 && _windows.TryGet(bubble.PetId, out var petWindow) && petWindow is not null)
-                bubbleWindow.MoveAbove(petWindow.Bounds);
+                bubbleWindow.MoveAbove(petWindow.Bounds, petWindow.DeviceDpi);
     }
 
     private void OnInstanceAdded(PetInstance instance)
@@ -557,10 +557,10 @@ internal sealed class AppHost : ApplicationContext
         var result = _dialogue.TryPublish(instance, group, _dialogueClock);
         if (!result.Accepted || result.Bubble is not { } bubble) return;
         if (!_windows.TryGet(instance.InstanceId, out var petWindow) || petWindow is null) return;
-        var bubbleWindow = new BubbleWindow(bubble.Text, new Point(petWindow.Bounds.Left, Math.Max(0, petWindow.Bounds.Top - 40)));
+        var bubbleWindow = new BubbleWindow(bubble.Text, petWindow.Location);
         _bubbleWindows[bubble.Id] = bubbleWindow;
+        bubbleWindow.MoveAbove(petWindow.Bounds, petWindow.DeviceDpi);
         bubbleWindow.Show();
-        bubbleWindow.MoveAbove(petWindow.Bounds);
     }
 
     private void ClearDialogues()

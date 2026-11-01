@@ -14,6 +14,11 @@ internal static class Program
         global::ApplicationConfiguration.Initialize();
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
         var app = Assembly.Load("YimyWalk.App");
+        if (args.Contains("--bubble-skin"))
+        {
+            RunBubbleSkinRegression();
+            return 0;
+        }
         if (args.Contains("--preview-pixels"))
         {
             RunPreviewPixelRegression(app);
@@ -396,6 +401,79 @@ internal static class Program
             "sidebar brand logo is fully inside its visible footer");
         Console.WriteLine($"BRAND_LOGO image=PASS bounds={logo.Bounds} parent={logo.Parent!.ClientSize}");
     }
+    static void RunBubbleSkinRegression()
+    {
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../../"));
+        var output = Path.Combine(root, "artifacts", "yimy-bubble-20261101");
+        Directory.CreateDirectory(output);
+        using var sheet = new Bitmap(1000, 650);
+        using var graphics = Graphics.FromImage(sheet);
+        graphics.Clear(Color.FromArgb(246, 243, 246));
+        using var heading = new Font("Microsoft YaHei UI", 19, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var caption = new Font("Microsoft YaHei UI", 13, FontStyle.Regular, GraphicsUnit.Pixel);
+        using var ink = new SolidBrush(Color.FromArgb(104, 77, 94));
+        graphics.DrawString("咿米 · 语言气泡", heading, ink, 36, 24);
+        graphics.DrawString("运行时皮肤与实时文字 · 粉白 / 犬耳 / 蝴蝶结 / 铃铛", caption, ink, 36, 58);
+        var texts = new[] { "我去", "今天也陪着你，汪！", "想吃薯条……\n也想和你一起听歌。" };
+        using var sprite = new Bitmap(Path.Combine(root, "Characters", "咿米_Yimy", "sprite.png"));
+        for (var i = 0; i < texts.Length; i++)
+        {
+            using var artwork = YimyWalk.App.Rendering.BubbleRenderer.Render(texts[i], 144, new Size(650, 400));
+            artwork.Pixels.Save(Path.Combine(output, $"bubble-{i + 1}-144dpi.png"));
+            var y = 102 + i * 166;
+            graphics.DrawImage(sprite, new Rectangle(40, y, 144, 144), new Rectangle(0, 0, 418, 418), GraphicsUnit.Pixel);
+            graphics.DrawImageUnscaled(artwork.Pixels, 215, y + 4);
+        }
+        graphics.DrawString("预览台词仅用于展示样式；角色图片与正式台词未更改。", caption, ink, 36, 612);
+        sheet.Save(Path.Combine(output, "bubble-preview.png"));
+        foreach (var dpi in new[] { 96, 120, 144, 192 })
+        {
+            using var art = YimyWalk.App.Rendering.BubbleRenderer.Render(texts[1], dpi, new Size(1000, 800));
+            art.Pixels.Save(Path.Combine(output, $"bubble-dpi-{dpi}.png"));
+            Require(!art.TextTruncated, "ordinary speech fits at " + dpi + " DPI");
+            Console.WriteLine($"BUBBLE_RENDER DPI={dpi} SIZE={art.Pixels.Size} TEXT_BOUNDS={art.TextBounds} PASS");
+        }
+        // Exercise the real layered window and a DPI rebuild without changing
+        // the user's settings. Input routing is checked by DesktopInputSmoke.
+        var area = Screen.PrimaryScreen!.WorkingArea;
+        using var backdrop = new Form
+        {
+            FormBorderStyle = FormBorderStyle.None, AutoScaleMode = AutoScaleMode.None,
+            StartPosition = FormStartPosition.Manual, ShowInTaskbar = false, TopMost = true,
+            Location = new Point(area.Left + 40, area.Top + 40), ClientSize = new Size(720, 240),
+            BackColor = Color.FromArgb(220, 233, 244)
+        };
+        backdrop.Show();
+        backdrop.Activate();
+        Pump(60);
+        var foregroundBefore = YimyWalk.App.Windows.NativeMethods.GetForegroundWindow();
+        using var window = new YimyWalk.App.Windows.BubbleWindow(texts[1], new Point(backdrop.Left + 100, backdrop.Top + 50));
+        window.Show();
+        Pump(100);
+        // Capture only our opaque test window, never the user's desktop or files.
+        var captureBounds = Rectangle.Inflate(window.Bounds, 20, 12);
+        Require(backdrop.Bounds.Contains(captureBounds), "capture stays inside the test backdrop");
+        using (var capture = new Bitmap(captureBounds.Width, captureBounds.Height))
+        {
+            using (var captureGraphics = Graphics.FromImage(capture))
+                captureGraphics.CopyFromScreen(captureBounds.Location, Point.Empty, capture.Size);
+            var relative = new Point(window.Left - captureBounds.Left, window.Top - captureBounds.Top);
+            var outside = capture.GetPixel(relative.X, relative.Y);
+            var body = capture.GetPixel(relative.X + window.Width / 2, relative.Y + window.Height * 3 / 4);
+            Require(outside.ToArgb() == backdrop.BackColor.ToArgb(), "real layered corner reveals underlying test window");
+            Require(body.R > 240 && body.G > 230, "real layered body displays the white Yimy skin");
+            Require(YimyWalk.App.Windows.NativeMethods.GetForegroundWindow() == foregroundBefore,
+                "showing the actual skin does not take focus");
+            capture.Save(Path.Combine(output, "bubble-desktop.png"));
+            Console.WriteLine("BUBBLE_DESKTOP ALPHA_CORNER=PASS WHITE_BODY=PASS NO_ACTIVATE=PASS");
+        }
+        window.MoveAbove(new Rectangle(area.Right - 100, area.Top + 10, 80, 80), window.DeviceDpi);
+        Pump(60);
+        Require(area.Contains(window.Bounds), "actual bubble remains in working area at top right");
+        Console.WriteLine($"BUBBLE_WINDOW DPI={window.DeviceDpi} BOUNDS={window.Bounds} WORKAREA_FIT=PASS");
+        Console.WriteLine("BUBBLE_PREVIEW " + Path.Combine(output, "bubble-preview.png"));
+    }
+
     static Control VisiblePage()
     {
         var pageHost = (Control)Field(manager, "_pageHost");

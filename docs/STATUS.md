@@ -1,5 +1,21 @@
 > **最新相关交接优先**：当前短摘要见 [`MAINTENANCE.md`](MAINTENANCE.md)，结构导航见 [`INDEX.md`](INDEX.md)。本文件按日期记录证据；先读顶部，再按功能定位最新相关条目。旧测试结果只适用于当时的代码、环境与范围。
 
+# 2026-11-01 咿米气泡重绘与接入
+
+**需求与依据**：用户确认主要角色为 Yimy（咿米），粉色头发的人形犬娘，要求参考附图的气泡轮廓完全重绘，并授权绘画。读取现有角色图，检索萌娘百科（原站要求 JS，通过可读同名镜像核对），仅以粉白 / 蓝瞳 / 犬耳 / 蝴蝶结 / 铃铛 / 代表色辅助设计；不复制百科图片或正文到产品。内置 image_gen 生成 2048×768 透明 PNG 并原样保存，来源、hash、完整提示词与切图参数见 [YIMY_VISUAL_STYLE](YIMY_VISUAL_STYLE.md)。
+
+**① 代码已实现**：替换浅黄矩形气泡为原创粉白双层圆框、犬耳 / 肉垫、条纹蝴蝶结、金铃铛 / 浅蓝珠。App 的 BubbleRenderer 九宫格拉伸皮肤、独立绘制 DPI 文字并按工作区限宽 / 限高；BubbleWindow 用逐像素 Alpha、持有 / 释放位图，移动复用，DPI / 工作区变化重建。宿主创建时先定位再显示，边缘定位保留负坐标。维持整窗输入透明 / 不激活；Core 对话调度、台词、角色原图和角色格式不改。当前全部角色共用该默认皮肤，未引入角色包主题配置。
+
+**② 构建通过**：`dotnet build YimyWalk.sln -c Release --no-restore` 为 0 警告 / 0 错误。ManagerUiSmoke 与 DesktopInputSmoke 编译通过。`build-yimywalk.ps1 -PublishPath artifacts/yimy-bubble-20261101/publish` 与 `test-release-package.ps1` 实跑通过，`PACKAGE PASS VERSION=0.1.14 FILES=13 CHECKSUMS=12`；版本仍为维护分支 0.1.14 的本地更新包，未发布新的 GitHub Release。
+
+**③ Core 测试通过**：`scripts/test-yimywalk.ps1` 和发布流程均实跑 **Core 164 / App 22，通过，0 失败 / 0 跳过**。App 新增六个用例，覆盖 96/120/144/192 DPI 的透明边缘、正文不透明、固定边角不随正文宽度变形、换行、500 字极长台词限高省略，以及负坐标 / 偏移工作区定位。
+
+**④ Windows 桌面已验证（当前单屏范围）**：`ManagerUiSmoke --bubble-skin` 在当前 2560×1600、144 DPI / 150% 会话显示真实分层气泡，截取工具自建纯色背景内的气泡区域，确认透明角露出背景、白色正文显示、显示前后前台 HWND 不变，顶部 / 右侧边界不超工作区。`desktop-input-smoke.ps1` 返回 `RESULT PASS`：修改探针点击位置为气泡可见正文中心，跨进程点击穿透与焦点保持通过；宠物拖拽、托盘、清空、辅助窗口落脚排除及退出也通过。工具一次初始断言错误地假设 Activate 必然使背景窗获得前台，已改为采样显示前后真实前台句柄比较后重跑通过；没有放宽气泡焦点要求。
+
+本次 `--bubble-skin` 同时输出四档渲染 DPI 样张；它们不是 OS DPI 切换。**Windows 桌面未验证**：真实多显示器 / 负坐标布局、跨屏 DPI 变化、拔插、睡眠与长期资源趋势；未继承旧压力结果来声称新样式长期通过。
+
+本地证据在 `artifacts/yimy-bubble-20261101/`：`tests.log`、`build.log`、`bubble-smoke.log`、`input-smoke.log`、`publish.log`、`package.log`，效果图 `bubble-preview.png`、真实窗口局部截图 `bubble-desktop.png`。产物 / 日志均排除在 Git 之外；源码与原画按已授权流程提交并正常推送，实际 Git 同步结果以本条后续记录及 `git status` 为准。
+
 # 2026-11-01 提交与 GitHub 推送权限核对
 
 用户明确授权提交并直接推送 GitHub，随后确认作者名为 `mikufilck`。本轮实现、测试与维护文档已提交为 `c447b93`（`fix: stabilize v0.1.14 and establish maintenance knowledge`，72 个文件），作者与用户确认一致；本仓库 local Git 身份已配置，沿用该作者现有邮箱，未修改全局身份。
