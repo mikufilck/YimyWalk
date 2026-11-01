@@ -27,6 +27,11 @@
 **版本**：`Directory.Build.props` 由 0.3.2 调整为 **0.3.1**（用户指定的发布号）；
 `RELEASE_NOTES.md` 把原 0.3.2 / 0.3.1 两节合并为一节 `v0.3.1`。
 
+**发布**：提交 `150018b` 已推送 `codex/bootstrap`；标签 `v0.3.1` 已推送；GitHub
+Release 已上传 `yimywalk-v0.3.1-win-x64.zip`（SHA-256 `F814568B75AEB733D2A153EF
+37FA0541D26EDCC361BAB0DDF89C2C73147CD165`，71,217,774 字节）与 `SHA256SUMS.txt`；
+远端 asset digest 与本地一致，`isDraft=false`。
+
 # 2026-11-02 默认体验调整：待机循环、窗口落脚默认开启、默认角色与启动生成
 
 **变更**：
