@@ -97,8 +97,8 @@ internal sealed class OverviewPage : ManagerPage
         _settings.Text = $"全局设置保存状态：{Host.SettingsSaveState}";
         _defaultRole.Text = $"当前默认角色：{Host.SelectedRoleId}";
         _pause.Text = Host.IsPaused ? "继续桌宠" : "暂停桌宠";
-        _operation.Text = Host.PendingCreationCount > 0
+        _operation.Text = Host.RuntimeDiagnostic ?? (Host.PendingCreationCount > 0
             ? "创建队列正在处理；一键清空会先取消待创建，再删除当前实例。"
-            : "单实例覆盖只在本次运行有效；总览的保存状态只描述全局设置。";
+            : "单实例覆盖只在本次运行有效；总览的保存状态只描述全局设置。");
     }
 }

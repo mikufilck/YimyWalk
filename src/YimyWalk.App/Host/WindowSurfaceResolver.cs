@@ -13,18 +13,22 @@ namespace YimyWalk.App.Host;
 /// </summary>
 internal sealed class WindowSurfaceResolver : IDisposable
 {
-    private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(250);
+    private const double RefreshInterval = 0.25;
+    private readonly IMonotonicClock _clock;
+    private readonly IAppLog _log;
     private const int MinimumSurfaceWidth = 32;
     private const int MinimumSurfaceHeight = 16;
     private readonly uint _hostProcessId = unchecked((uint)Environment.ProcessId);
     private readonly Func<Vector2, WorldRect> _fallback;
     private IReadOnlyList<WindowSurfaceCandidate> _candidates = Array.Empty<WindowSurfaceCandidate>();
-    private DateTime _nextRefreshUtc;
+    private double _nextRefreshSeconds;
     private bool _hasSnapshot;
     private bool _disposed;
 
-    public WindowSurfaceResolver(Func<Vector2, WorldRect> fallback)
+    public WindowSurfaceResolver(Func<Vector2, WorldRect> fallback, IMonotonicClock? clock = null, IAppLog? log = null)
     {
+        _clock = clock ?? StopwatchClock.Instance;
+        _log = log ?? NullAppLog.Instance;
         _fallback = fallback ?? throw new ArgumentNullException(nameof(fallback));
     }
 
@@ -103,9 +107,10 @@ internal sealed class WindowSurfaceResolver : IDisposable
             }, IntPtr.Zero);
             if (!enumerationSucceeded)
             {
+                _log.Record("WINDOW_ENUMERATION_FAILED");
                 _candidates = Array.Empty<WindowSurfaceCandidate>();
                 _hasSnapshot = false;
-                _nextRefreshUtc = DateTime.UtcNow.Add(RefreshInterval);
+                _nextRefreshSeconds = _clock.Seconds + RefreshInterval;
                 return;
             }
 
@@ -129,11 +134,12 @@ internal sealed class WindowSurfaceResolver : IDisposable
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
+            _log.Record("WINDOW_ENUMERATION_FAILED", ex);
             _candidates = Array.Empty<WindowSurfaceCandidate>();
             _hasSnapshot = false;
         }
 
-        _nextRefreshUtc = DateTime.UtcNow.Add(RefreshInterval);
+        _nextRefreshSeconds = _clock.Seconds + RefreshInterval;
     }
 
     public void Dispose()
@@ -146,7 +152,7 @@ internal sealed class WindowSurfaceResolver : IDisposable
 
     private void RefreshIfNeeded()
     {
-        if (DateTime.UtcNow >= _nextRefreshUtc) RefreshNow();
+        if (_clock.Seconds >= _nextRefreshSeconds) RefreshNow();
     }
 
     private bool IsLiveCandidate(string sourceId)

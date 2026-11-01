@@ -91,7 +91,7 @@ public sealed class PetEngine
         {
             if (pet.State == PetState.Walk)
             {
-                var walkSpeed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000);
+                var walkSpeed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed);
                 pet.Velocity = new Vector2((int)pet.Facing * walkSpeed, pet.Velocity.Y);
             }
             pet.State = PetState.Fall;
@@ -112,6 +112,23 @@ public sealed class PetEngine
             pet.State = PetState.Idle;
             pet.StateTime = 0;
             pet.Velocity = Vector2.Zero;
+        }
+
+        if (pet.State is PetState.Idle or PetState.Walk
+            && pet.FoodTargetPosition is { } food
+            && pet.BehaviorOverrides.ResolveWalkEnabled(DefaultWalkEnabled)
+            && Math.Abs(food.Y - pet.FootPosition.Y) <= 2f)
+        {
+            var distance = food.X - pet.FootPosition.X;
+            var step = Math.Min(Math.Abs(distance), Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed) * delta);
+            if (Math.Abs(distance) > 2f)
+            {
+                pet.Facing = distance < 0 ? FacingDirection.Left : FacingDirection.Right;
+                pet.State = PetState.Walk;
+                pet.FootPosition += new Vector2(Math.Sign(distance) * step, 0);
+                pet.Velocity = new Vector2(Math.Sign(distance) * step / delta, 0);
+            }
+            return;
         }
 
         if (pet.State is PetState.Idle or PetState.Walk)
@@ -150,7 +167,10 @@ public sealed class PetEngine
                 break;
             case PetState.Idle:
                 pet.Velocity = Vector2.Zero;
-                var activityRate = pet.BehaviorOverrides.ResolveActivityRate(ActivityRate);
+                // Boredom gradually shortens idle waits, bounded to 2x, without
+                // changing physical speed or bypassing the walk gate.
+                var activityRate = pet.BehaviorOverrides.ResolveActivityRate(ActivityRate)
+                    * (1f + Math.Clamp((pet.Boredom - 0.5f) * 2f, 0f, 1f));
                 var idleMin = Math.Max(0, pet.Definition.Defaults.IdleSecondsMin) / activityRate;
                 var idleMax = Math.Max(idleMin, pet.Definition.Defaults.IdleSecondsMax) / activityRate;
                 if (pet.BehaviorOverrides.ResolveWalkEnabled(DefaultWalkEnabled)
@@ -211,7 +231,7 @@ public sealed class PetEngine
 
     private static void IntegrateWalking(PetInstance pet, WorldRect area, WorldRect travelBounds, float delta)
     {
-        var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000);
+        var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed);
         var x = pet.FootPosition.X + (int)pet.Facing * speed * delta;
         var width = travelBounds.Right - travelBounds.Left;
         if (width > 0)
@@ -328,7 +348,7 @@ public sealed class PetEngine
         var windowDesire = pet.BehaviorOverrides.ResolveWindowJumpDesire(WindowJumpDesire);
         pet.JumpAttemptDelay = RandomDelay(InitialJumpDelayMin, InitialJumpDelayMax);
 
-        var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000);
+        var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed);
         var baseJumpSpeed = Math.Max(0, pet.Definition.Movement.JumpSpeed);
         var maximumJumpSpeed = baseJumpSpeed * WindowJumpSpeedMultiplier;
         var scale = EffectiveScale(pet);
@@ -383,7 +403,7 @@ public sealed class PetEngine
         if (safeRight <= safeLeft || height + 8 >= area.Height || pet.Definition.Movement.WalkSpeed <= 0)
             return false;
 
-        var nextX = pet.FootPosition.X + (int)pet.Facing * Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000) * delta;
+        var nextX = pet.FootPosition.X + (int)pet.Facing * Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed) * delta;
         var side = pet.Facing == FacingDirection.Right && nextX >= safeRight ? FacingDirection.Right
             : pet.Facing == FacingDirection.Left && nextX <= safeLeft ? FacingDirection.Left : (FacingDirection?)null;
         if (side is null) return false;
@@ -413,7 +433,7 @@ public sealed class PetEngine
 
     private void IntegrateClimbing(PetInstance pet, float delta)
     {
-        var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000);
+        var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed);
         var y = pet.FootPosition.Y - speed * delta;
         if (y <= pet.ClimbTopY)
         {
@@ -437,7 +457,7 @@ public sealed class PetEngine
         var anchorX = pet.Definition.Anchor.X * scale;
         var left = pet.AttachedDisplayArea.Left + anchorX + 4f;
         var right = pet.AttachedDisplayArea.Right - (width - anchorX) - 4f;
-        var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000);
+        var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed);
         var x = pet.FootPosition.X + (int)pet.Facing * speed * delta;
         if (pet.StateTime >= pet.TopDropDelay
             || (pet.Facing == FacingDirection.Left && x <= left)
@@ -463,7 +483,8 @@ public sealed class PetEngine
     }
 
     private float EffectiveScale(PetInstance pet)
-        => Math.Clamp(pet.Definition.Scale * pet.ResolveScale(GlobalScale) * Surface.DisplayScaleForPoint(pet.FootPosition), 0.1f, 64f);
+        => PetLimits.EffectiveScale(pet.Definition.CellWidth, pet.Definition.CellHeight,
+            pet.Definition.Scale * pet.ResolveScale(GlobalScale) * Surface.DisplayScaleForPoint(pet.FootPosition));
 
     private void RearmClimbEdge(PetInstance pet)
     {
@@ -508,7 +529,7 @@ public sealed class PetEngine
     {
         if (pet.State == PetState.Walk)
         {
-            var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000);
+            var speed = Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed);
             return pet.FootPosition + new Vector2((int)pet.Facing * speed * delta, 0);
         }
 
@@ -525,10 +546,10 @@ public sealed class PetEngine
             return pet.FootPosition;
 
         if (pet.State == PetState.Climb)
-            return new Vector2(pet.ClimbEdgeX, pet.FootPosition.Y - Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000) * delta);
+            return new Vector2(pet.ClimbEdgeX, pet.FootPosition.Y - Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed) * delta);
 
         if (pet.State == PetState.TopWalk)
-            return new Vector2(pet.FootPosition.X + (int)pet.Facing * Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, 1000) * delta, pet.FootPosition.Y);
+            return new Vector2(pet.FootPosition.X + (int)pet.Facing * Math.Clamp(pet.Definition.Movement.WalkSpeed, 0, PetLimits.MaxWalkSpeed) * delta, pet.FootPosition.Y);
 
         return pet.FootPosition;
     }

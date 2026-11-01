@@ -11,9 +11,10 @@ public sealed class CharacterCatalogTests
         var role = Path.Combine(root, "cat");
         Directory.CreateDirectory(role);
         var source = TestSpriteFactory.WriteSprite(96, 96, fullyTransparent: false);
+        try
+        {
         File.Copy(Path.Combine(source, "sprite.png"), Path.Combine(role, "sprite.png"));
-
-        var catalog = new CharacterCatalog();
+        using var catalog = new CharacterCatalog();
         var first = catalog.Scan(root)["cat"];
         File.WriteAllBytes(Path.Combine(role, "sprite.png"), new byte[] { 1, 2, 3 });
 
@@ -23,5 +24,11 @@ public sealed class CharacterCatalogTests
         Assert.Same(first, retained);
         Assert.Single(catalog.LastFailures);
         Assert.False(first.IsDisposed);
+        }
+        finally
+        {
+            TestSpriteFactory.DeleteFixture(source);
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
     }
 }

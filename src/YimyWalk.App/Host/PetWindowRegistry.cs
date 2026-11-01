@@ -17,10 +17,12 @@ internal sealed class PetWindowRegistry : IDisposable
         if (_windows.TryGetValue(window.Instance.InstanceId, out var previous))
             previous.Dispose();
         _windows[window.Instance.InstanceId] = window;
-        window.Show();
-        // The handle now exists at its target display; refresh once so the
-        // first bitmap uses the target monitor's DPI.
-        window.RefreshFrame();
+        try
+        {
+            window.Show();
+            window.RefreshFrame();
+        }
+        catch { _windows.Remove(window.Instance.InstanceId); window.Dispose(); throw; }
     }
 
     public bool Remove(Guid instanceId)

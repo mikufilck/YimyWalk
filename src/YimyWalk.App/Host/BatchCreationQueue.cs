@@ -19,6 +19,7 @@ internal sealed class BatchCreationQueue : IDisposable
     public int ActiveCount { get; private set; }
     public Func<PetInstance> CreateOne { get; set; }
     public event Action? Changed;
+    public event Action<Exception>? Failed;
 
     public void Enqueue(int count)
         => Enqueue(CreateOne, count);
@@ -53,10 +54,15 @@ internal sealed class BatchCreationQueue : IDisposable
             return;
         }
 
-        _work.Drain(8, _ =>
+        try
         {
-            ActiveCount++;
-        });
+            _work.Drain(8, _ => ActiveCount++);
+        }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            Cancel();
+            Failed?.Invoke(error);
+        }
         if (_work.PendingCount <= 0) _timer.Stop();
         Changed?.Invoke();
     }
@@ -68,5 +74,6 @@ internal sealed class BatchCreationQueue : IDisposable
         Cancel();
         _timer.Dispose();
         Changed = null;
+        Failed = null;
     }
 }

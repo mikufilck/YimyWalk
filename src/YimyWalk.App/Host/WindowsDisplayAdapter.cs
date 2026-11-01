@@ -13,6 +13,8 @@ namespace YimyWalk.App.Host;
 internal sealed class WindowsDisplayAdapter
 {
     private const uint DefaultDpi = 96;
+    private readonly IAppLog _log;
+    public WindowsDisplayAdapter(IAppLog? log = null) => _log = log ?? NullAppLog.Instance;
 
     public DisplaySnapshot Capture(IntPtr windowHandle = default)
     {
@@ -40,6 +42,7 @@ internal sealed class WindowsDisplayAdapter
         }
         catch (Exception ex) when (ex is InvalidOperationException or ExternalException or Win32Exception)
         {
+            _log.Record("DISPLAY_ENUMERATION_FAILED", ex);
             // Monitor enumeration can fail during a display reconnect. The
             // deterministic fallback keeps physics and startup usable.
         }
@@ -58,25 +61,23 @@ internal sealed class WindowsDisplayAdapter
     public float ScaleForWindow(IntPtr windowHandle)
         => ReadScale(windowHandle);
 
-    private static float ReadMonitorScale(Screen screen)
+    private float ReadMonitorScale(Screen screen)
     {
         try
         {
             var center = new NativeMethods.Point(screen.Bounds.Left + screen.Bounds.Width / 2,
                 screen.Bounds.Top + screen.Bounds.Height / 2);
-            var monitor = MonitorFromPoint(center, 2 /* MONITOR_DEFAULTTONEAREST */);
-            if (monitor != IntPtr.Zero && GetDpiForMonitor(monitor, 0 /* MDT_EFFECTIVE_DPI */, out var x, out _) == 0 && x > 0)
+            var monitor = NativeMethods.MonitorFromPoint(center, 2 /* MONITOR_DEFAULTTONEAREST */);
+            if (monitor != IntPtr.Zero && NativeMethods.GetDpiForMonitor(monitor, 0 /* MDT_EFFECTIVE_DPI */, out var x, out _) == 0 && x > 0)
                 return x / (float)DefaultDpi;
         }
-        catch (EntryPointNotFoundException) { }
-        catch (DllNotFoundException) { }
+        catch (EntryPointNotFoundException ex) { _log.Record("DPI_FALLBACK", ex); }
+        catch (DllNotFoundException ex) { _log.Record("DPI_FALLBACK", ex); }
         return ReadScale(IntPtr.Zero);
     }
 
-    [DllImport("user32.dll")] private static extern IntPtr MonitorFromPoint(NativeMethods.Point point, uint flags);
-    [DllImport("shcore.dll")] private static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
 
-    private static float ReadScale(IntPtr windowHandle)
+    private float ReadScale(IntPtr windowHandle)
     {
         try
         {

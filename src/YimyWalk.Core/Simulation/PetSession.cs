@@ -10,6 +10,7 @@ public sealed class PetSession : IDisposable
     private readonly Dictionary<string, DefinitionLease> _definitions = new(StringComparer.OrdinalIgnoreCase);
     private readonly PetEngine _engine;
     private bool _disposed;
+    private IReadOnlyCollection<PetInstance>? _snapshot;
 
     public PetSession(IWorldSurface surface, IRandomSource random, int? hardLimit = null)
     {
@@ -20,19 +21,21 @@ public sealed class PetSession : IDisposable
     public int? HardLimit { get; }
     public bool IsPaused { get; private set; }
     public bool HungerEnabled { get => _engine.HungerEnabled; set => _engine.HungerEnabled = value; }
-    public float NeedRate { get => _engine.NeedRate; set => _engine.NeedRate = Math.Clamp(value, 0f, 4f); }
+    public float NeedRate { get => _engine.NeedRate; set => _engine.NeedRate = float.IsFinite(value) ? Math.Clamp(value, 0f, 4f) : 1f; }
     public bool DefaultWalkEnabled { get => _engine.DefaultWalkEnabled; set => _engine.DefaultWalkEnabled = value; }
-    public float ActivityRate { get => _engine.ActivityRate; set => _engine.ActivityRate = Math.Clamp(value, 0.1f, 4f); }
+    public float ActivityRate { get => _engine.ActivityRate; set => _engine.ActivityRate = float.IsFinite(value) ? Math.Clamp(value, 0.1f, 4f) : 1f; }
     public float JumpDesire { get => _engine.JumpDesire; set => _engine.JumpDesire = ClampDesire(value); }
     public float ClimbDesire { get => _engine.ClimbDesire; set => _engine.ClimbDesire = ClampDesire(value); }
     public float WindowJumpDesire { get => _engine.WindowJumpDesire; set => _engine.WindowJumpDesire = ClampDesire(value); }
     public float GlobalScale { get => _engine.GlobalScale; set => _engine.GlobalScale = ClampScale(value); }
     public int ActiveCount => _instances.Count;
     public IWorldSurface Surface => _engine.Surface;
-    public IReadOnlyCollection<PetInstance> Instances => _instances.Values.Select(value => value.Pet).ToArray();
+    public VirtualFoodSystem VirtualFood { get; } = new();
+    public IReadOnlyCollection<PetInstance> Instances => _snapshot ??= Array.AsReadOnly(_instances.Values.Select(value => value.Pet).ToArray());
 
     public event Action<PetInstance>? InstanceAdded;
     public event Action<PetInstance>? InstanceRemoved;
+    public event Action<PetInstance, Exception>? InstanceFaulted;
 
     public void RegisterDefinition(string id, CharacterDefinition definition)
     {
@@ -86,6 +89,7 @@ public sealed class PetSession : IDisposable
     public bool Remove(Guid instanceId)
     {
         if (!_instances.Remove(instanceId, out var entry)) return false;
+        _snapshot = null;
         entry.Lease.Dispose();
         InstanceRemoved?.Invoke(entry.Pet);
         return true;
@@ -95,11 +99,24 @@ public sealed class PetSession : IDisposable
     {
         foreach (var id in _instances.Keys.ToArray())
             Remove(id);
+        VirtualFood.Clear();
     }
 
     public void Tick(double deltaSeconds)
     {
-        if (!IsPaused) _engine.Tick(_instances.Values.Select(entry => entry.Pet), deltaSeconds);
+        if (IsPaused) return;
+        var pets = Instances;
+        VirtualFood.Prepare(pets, DefaultWalkEnabled);
+        foreach (var pet in pets)
+        {
+            try { _engine.Tick(pet, deltaSeconds); }
+            catch (Exception error) when (InstanceFaulted is not null && error is not OutOfMemoryException)
+            {
+                Remove(pet.InstanceId);
+                InstanceFaulted?.Invoke(pet, error);
+            }
+        }
+        VirtualFood.Tick(pets, deltaSeconds, DefaultWalkEnabled);
     }
 
     public void Pause() => IsPaused = true;
@@ -118,11 +135,13 @@ public sealed class PetSession : IDisposable
         if (_disposed) return;
         _disposed = true;
         Clear();
+        VirtualFood.Clear();
         foreach (var lease in _definitions.Values)
             lease.Dispose();
         _definitions.Clear();
         InstanceAdded = null;
         InstanceRemoved = null;
+        InstanceFaulted = null;
     }
 
     private DefinitionLease GetOrAddLease(CharacterDefinition definition)
@@ -130,6 +149,7 @@ public sealed class PetSession : IDisposable
         var existing = _definitions.Values.FirstOrDefault(lease => ReferenceEquals(lease.Definition, definition));
         if (existing is not null) return existing;
         var lease = new DefinitionLease(definition);
+        if (_definitions.TryGetValue(definition.Id, out var previous)) previous.Dispose();
         _definitions[definition.Id] = lease;
         return lease;
     }
@@ -139,8 +159,11 @@ public sealed class PetSession : IDisposable
         if (HardLimit is not null && ActiveCount >= HardLimit.Value)
             throw new InvalidOperationException("Configured pet session limit reached.");
         var pet = new PetInstance(lease.Definition, position);
-        _instances.Add(pet.InstanceId, (pet, lease.AcquireInstance()));
-        InstanceAdded?.Invoke(pet);
+        var handle = lease.AcquireInstance();
+        _instances.Add(pet.InstanceId, (pet, handle));
+        _snapshot = null;
+        try { InstanceAdded?.Invoke(pet); }
+        catch { _instances.Remove(pet.InstanceId); _snapshot = null; handle.Dispose(); throw; }
         return pet;
     }
 

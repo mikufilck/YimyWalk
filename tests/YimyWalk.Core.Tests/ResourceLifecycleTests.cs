@@ -29,12 +29,16 @@ public sealed class ResourceLifecycleTests
     public void ReplacingUnreferencedCatalogVersionsReleasesThem()
     {
         var directory = TestSpriteFactory.WriteSprite(96, 96, false);
-        using var catalog = new CharacterCatalog();
-        var root = Path.GetDirectoryName(directory)!;
-        var first = catalog.Scan(root).Values.Single();
-        var next = catalog.Scan(root).Values.Single();
-        Assert.True(first.IsDisposed);
-        Assert.False(next.IsDisposed);
+        try
+        {
+            using var catalog = new CharacterCatalog();
+            var root = Path.GetDirectoryName(directory)!;
+            var first = catalog.Scan(root).Values.Single();
+            var next = catalog.Scan(root).Values.Single();
+            Assert.True(first.IsDisposed);
+            Assert.False(next.IsDisposed);
+        }
+        finally { TestSpriteFactory.DeleteFixture(directory); }
     }
     [Fact]
     public void DefinitionWaitsForInstanceAndRendererReferencesBeforeDisposal()

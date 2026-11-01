@@ -11,17 +11,25 @@ internal sealed class PetWindow : Form
     private readonly Host.DesktopWorldSurface? _desktopSurface;
     private float _globalScale;
     private RenderedSurface? _surface;
+    private SurfaceLease? _surfaceLease;
+    private RenderedSurface? _lastPresented;
+    private Point _lastPresentedLocation;
+    private float _renderedScale;
+    private bool _renderedMirrored;
+    private bool _visibleRequested = true;
     private bool _dragging;
     private Point _lastCursor;
-    private DateTime _lastCursorTime;
+    private double _lastCursorSeconds;
+    private readonly Host.IMonotonicClock _clock;
     private Vector2 _dragVelocity;
     private Point _grabOffset;
     private bool _cacheDefinitionRetained;
     private float _dpiScale = 1f;
     public event Action<string>? Interaction;
 
-    public PetWindow(PetInstance instance, PetSession session, FrameSurfaceCache cache, float globalScale = 1f)
+    public PetWindow(PetInstance instance, PetSession session, FrameSurfaceCache cache, float globalScale = 1f, Host.IMonotonicClock? clock = null)
     {
+        _clock = clock ?? Host.StopwatchClock.Instance;
         Instance = instance;
         _engine = new PetEngine(session.Surface, new Host.SystemRandomSource());
         _desktopSurface = session.Surface as Host.DesktopWorldSurface;
@@ -44,7 +52,8 @@ internal sealed class PetWindow : Form
         MouseUp += HandleMouseUp;
         MouseCaptureChanged += (_, _) => ReleaseDrag();
         Deactivate += (_, _) => ReleaseDrag();
-        RefreshFrame();
+        try { RefreshFrame(); }
+        catch { Dispose(); throw; }
     }
 
     public PetInstance Instance { get; }
@@ -62,6 +71,8 @@ internal sealed class PetWindow : Form
 
     protected override void Dispose(bool disposing)
     {
+        _surfaceLease?.Dispose();
+        _surfaceLease = null;
         if (_cacheDefinitionRetained)
         {
             _cacheDefinitionRetained = false;
@@ -73,6 +84,7 @@ internal sealed class PetWindow : Form
 
     public void SetVisibleWithoutActivation(bool visible)
     {
+        _visibleRequested = visible;
         if (!IsHandleCreated)
         {
             if (visible) Show();
@@ -97,7 +109,7 @@ internal sealed class PetWindow : Form
 
     public void RefreshFrame()
     {
-        if (IsDisposed) return;
+        if (IsDisposed || !_visibleRequested) return;
         if (_desktopSurface is not null)
         {
             var nextDpiScale = _desktopSurface.ScaleForPoint(Instance.FootPosition);
@@ -106,16 +118,29 @@ internal sealed class PetWindow : Form
         }
         var frame = Instance.Definition.SelectFrame(Instance.GetFrameKind(), Instance.AnimationTime);
         var scale = EffectiveScale;
-        _surface = _cache.Get(Instance.Definition, frame, frame.Mirrored, scale);
         var x = (int)Math.Round(Instance.FootPosition.X - Instance.Definition.Anchor.X * scale);
         var y = (int)Math.Round(Instance.FootPosition.Y - Instance.Definition.Anchor.Y * scale);
         var location = new Point(x, y);
+        if (_surface is not null && ReferenceEquals(_surface, _lastPresented)
+            && _surface.FrameIndex == frame.Index && _renderedMirrored == frame.Mirrored
+            && _renderedScale == scale && _lastPresentedLocation == location) return;
+        var nextLease = _cache.Acquire(Instance.Definition, frame, frame.Mirrored, scale);
+        var previousLease = _surfaceLease;
+        _surfaceLease = nextLease;
+        _surface = nextLease.Surface;
+        _renderedScale = scale;
+        _renderedMirrored = frame.Mirrored;
+        previousLease?.Dispose();
         // Set the target monitor before creating/resizing the native handle so
         // WinForms can apply that monitor's DPI instead of the primary screen's.
-        Location = location;
-        ClientSize = _surface.Bitmap.Size;
-        if (IsHandleCreated)
+        if (Location != location) Location = location;
+        if (ClientSize != _surface.Bitmap.Size) ClientSize = _surface.Bitmap.Size;
+        if (IsHandleCreated && (!ReferenceEquals(_lastPresented, _surface) || _lastPresentedLocation != location))
+        {
             LayeredWindowRenderer.Present(Handle, _surface.Bitmap, location);
+            _lastPresented = _surface;
+            _lastPresentedLocation = location;
+        }
     }
 
     protected override void WndProc(ref Message m)
@@ -153,7 +178,7 @@ internal sealed class PetWindow : Form
         Capture = true;
         _grabOffset = new Point(e.X, e.Y);
         _lastCursor = Cursor.Position;
-        _lastCursorTime = DateTime.UtcNow;
+        _lastCursorSeconds = _clock.Seconds;
         _engine.BeginDrag(Instance);
         Interaction?.Invoke("clicked");
     }
@@ -162,12 +187,12 @@ internal sealed class PetWindow : Form
     {
         if (!_dragging) return;
         var cursor = Cursor.Position;
-        var now = DateTime.UtcNow;
-        var delta = (float)Math.Max(0.001, (now - _lastCursorTime).TotalSeconds);
+        var now = _clock.Seconds;
+        var delta = (float)Math.Max(0.001, now - _lastCursorSeconds);
         var scale = EffectiveScale;
         var toss = new Vector2((cursor.X - _lastCursor.X) / delta, (cursor.Y - _lastCursor.Y) / delta);
         _lastCursor = cursor;
-        _lastCursorTime = now;
+        _lastCursorSeconds = now;
         _engine.SetDraggedFootPosition(Instance, new Vector2(
             cursor.X - _grabOffset.X + Instance.Definition.Anchor.X * (float)scale,
             cursor.Y - _grabOffset.Y + Instance.Definition.Anchor.Y * (float)scale));
@@ -190,5 +215,6 @@ internal sealed class PetWindow : Form
     }
 
     private float EffectiveScale
-        => Math.Clamp(Instance.Definition.Scale * Instance.ResolveScale(_globalScale) * _dpiScale, 0.1f, 64f);
+        => PetLimits.EffectiveScale(Instance.Definition.CellWidth, Instance.Definition.CellHeight,
+            Instance.Definition.Scale * Instance.ResolveScale(_globalScale) * _dpiScale);
 }

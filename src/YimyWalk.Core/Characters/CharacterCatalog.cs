@@ -12,6 +12,16 @@ public sealed class CharacterCatalog : IDisposable
         new ReadOnlyDictionary<string, CharacterDefinition>(new Dictionary<string, CharacterDefinition>(StringComparer.OrdinalIgnoreCase));
     private Dictionary<string, DefinitionLease> _leases = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
+    private readonly Func<string, CharacterDefinition> _load;
+    private readonly Func<string, string[]> _enumerate;
+
+    public CharacterCatalog() : this(CharacterLoader.LoadDirectory, Directory.GetDirectories) { }
+
+    internal CharacterCatalog(Func<string, CharacterDefinition> load, Func<string, string[]> enumerate)
+    {
+        _load = load;
+        _enumerate = enumerate;
+    }
 
     public IReadOnlyList<CharacterScanFailure> LastFailures { get; private set; } = Array.Empty<CharacterScanFailure>();
     public IReadOnlyDictionary<string, CharacterDefinition> Definitions => _definitions;
@@ -28,39 +38,55 @@ public sealed class CharacterCatalog : IDisposable
             return _definitions;
         }
 
+        string[] directories;
+        try { directories = _enumerate(root); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            LastFailures = new[] { new CharacterScanFailure(root, ex.Message) };
+            return _definitions;
+        }
         var next = new Dictionary<string, CharacterDefinition>(StringComparer.OrdinalIgnoreCase);
         var nextLeases = new Dictionary<string, DefinitionLease>(StringComparer.OrdinalIgnoreCase);
         var failures = new List<CharacterScanFailure>();
-        foreach (var directory in Directory.EnumerateDirectories(root))
+        var committed = false;
+        try
         {
-            try
+            foreach (var directory in directories)
             {
-                var definition = CharacterLoader.LoadDirectory(directory);
-                var lease = new DefinitionLease(definition);
-                if (nextLeases.TryGetValue(definition.Id, out var duplicate)) duplicate.Dispose();
-                next[definition.Id] = definition;
-                nextLeases[definition.Id] = lease;
-            }
-            catch (CharacterLoadException ex)
-            {
-                failures.Add(new CharacterScanFailure(directory, ex.Message));
-                if (_definitions.TryGetValue(Path.GetFileName(directory), out var previous))
+                try
                 {
-                    next[previous.Id] = previous;
-                    if (_leases.TryGetValue(previous.Id, out var previousLease)) nextLeases[previous.Id] = previousLease;
+                    var definition = _load(directory);
+                    var lease = new DefinitionLease(definition);
+                    if (nextLeases.TryGetValue(definition.Id, out var duplicate) && !_leases.Values.Contains(duplicate)) duplicate.Dispose();
+                    next[definition.Id] = definition;
+                    nextLeases[definition.Id] = lease;
+                }
+                catch (Exception ex) when (ex is CharacterLoadException or IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                {
+                    failures.Add(new CharacterScanFailure(directory, ex.Message));
+                    if (_definitions.TryGetValue(Path.GetFileName(directory), out var previous))
+                    {
+                        next[previous.Id] = previous;
+                        if (_leases.TryGetValue(previous.Id, out var previousLease)) nextLeases[previous.Id] = previousLease;
+                    }
                 }
             }
-        }
 
-        var old = _definitions;
-        var oldLeases = _leases;
-        _definitions = new ReadOnlyDictionary<string, CharacterDefinition>(next);
-        _leases = nextLeases;
-        LastFailures = failures;
-        foreach (var pair in old)
-            if (!next.TryGetValue(pair.Key, out var current) || !ReferenceEquals(pair.Value, current))
-                oldLeases[pair.Key].Dispose();
-        return _definitions;
+            var oldLeases = _leases;
+            _definitions = new ReadOnlyDictionary<string, CharacterDefinition>(next);
+            _leases = nextLeases;
+            committed = true;
+            LastFailures = failures;
+            foreach (var lease in oldLeases.Values)
+                if (!nextLeases.Values.Contains(lease)) lease.Dispose();
+            return _definitions;
+        }
+        finally
+        {
+            if (!committed)
+                foreach (var lease in nextLeases.Values)
+                    if (!_leases.Values.Contains(lease)) lease.Dispose();
+        }
     }
 
     public void Dispose()

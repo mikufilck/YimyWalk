@@ -1,5 +1,15 @@
 # Unreleased
 
+## 0.1.14 — 稳定性修正
+
+- 修正设置恢复后的备份保全、同 ID 定义租约释放、角色扫描失败时的资源清理。
+- 食物目标交由统一物理引擎推进，遵守暂停和单实例走动设置；食物窗口与气泡不参与宿主落脚面。
+- 渲染加入像素与内存预算、在用 surface 引用保护、GDI 分步清理与失败诊断。
+- 使用单调时钟、有限日志和独立 smoke 设置目录；补充 Windows 适配层测试。
+- 移除存在审计告警的 ImageSharp 依赖，采用 PNG 专用边界与 StbImageNext；角色格式与原始素材保持兼容。
+
+验证证据与桌面覆盖范围见 `docs/STATUS.md` 最新条目。
+
 ## Manager heading spacing
 
 - Fixed page headings so the large title and subtitle use the title's measured font height instead of a fixed vertical offset. This prevents the subtitle from overlapping the title at the normal 120 DPI layout.

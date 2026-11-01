@@ -1,15 +1,16 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
     [string]$OutputPath = 'artifacts\publish\yimywalk-win-x64',
     [string]$DotnetPath,
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '0.1.5'
+    [string]$Version
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($Version)) { $Version = & (Join-Path $PSScriptRoot 'get-yimywalk-version.ps1') }
 $build = Join-Path $PSScriptRoot 'build-yimywalk.ps1'
 if (-not (Test-Path -LiteralPath $build -PathType Leaf)) {
     throw "Build script not found: $build"

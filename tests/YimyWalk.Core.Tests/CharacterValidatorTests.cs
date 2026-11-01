@@ -1,5 +1,4 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using YimyWalk.Core.Imaging;
 using YimyWalk.CharacterTools;
 
 namespace YimyWalk.Core.Tests;
@@ -150,8 +149,8 @@ public sealed class CharacterValidatorTests
             CharacterPreviewWriter.WritePreview(report.Definition!, preview);
             CharacterPreviewWriter.WriteReference(reference);
 
-            using var previewImage = Image.Load<Rgba32>(preview);
-            using var referenceImage = Image.Load<Rgba32>(reference);
+            using var previewImage = PngImage.Load(preview);
+            using var referenceImage = PngImage.Load(reference);
             Assert.Equal(96, previewImage.Width);
             Assert.Equal(96, previewImage.Height);
             Assert.Equal(192, referenceImage.Width);

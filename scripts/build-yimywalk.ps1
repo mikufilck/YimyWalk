@@ -1,15 +1,16 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
     [string]$PublishPath,
     [string]$DotnetPath,
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '0.1.5'
+    [string]$Version
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($Version)) { $Version = & (Join-Path $PSScriptRoot "get-yimywalk-version.ps1") }
 $dotnet = if (-not [string]::IsNullOrWhiteSpace($DotnetPath)) {
     [IO.Path]::GetFullPath($DotnetPath)
 } elseif (Test-Path (Join-Path $root '.tools\dotnet\dotnet.exe')) {
@@ -100,7 +101,7 @@ Third-party license and attribution information is in THIRD_PARTY_NOTICES.md.
         selfContained = $true
         requiredRuntimes = @()
         roles = $roles
-        licenseFiles = @('THIRD_PARTY_NOTICES.md', 'licenses/ImageSharp-LICENSE.txt', 'licenses/Apache-2.0.txt')
+        licenseFiles = @('THIRD_PARTY_NOTICES.md', 'licenses/StbImageNext-LICENSE.txt', 'licenses/Apache-2.0.txt')
         networkEnabledByDefault = $false
         startupRegistrationEnabled = $false
         requiresAdministrator = $false
@@ -110,7 +111,7 @@ Third-party license and attribution information is in THIRD_PARTY_NOTICES.md.
 
     $requiredFiles = @(
         'YimyWalk.exe', 'THIRD_PARTY_NOTICES.md', 'RELEASE_NOTES.md',
-        'Start-YimyWalk.ps1', 'run-yimywalk.ps1', 'licenses/ImageSharp-LICENSE.txt', 'licenses/Apache-2.0.txt',
+        'Start-YimyWalk.ps1', 'run-yimywalk.ps1', 'licenses/StbImageNext-LICENSE.txt', 'licenses/Apache-2.0.txt',
         'PACKAGE_README.txt', 'PACKAGE_MANIFEST.json')
     foreach ($file in $requiredFiles) {
         if (-not (Test-Path -LiteralPath (Join-Path $publish $file) -PathType Leaf)) {

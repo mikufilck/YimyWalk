@@ -18,7 +18,7 @@ YimyWalk 是一个面向 Windows x64 的离线桌面 2D 宠物引擎。它采用
 
 优先从 GitHub 仓库的 [Releases](https://github.com/Data-Echo/YimyWalk/releases) 下载 Windows x64 便携包。发布包是 self-contained 单文件应用，通常不需要另行安装 .NET 运行时。如果 Releases 暂时还没有对应版本，可以按下方步骤从源码构建。
 
-解压后双击 `YimyWalk.exe` 即可启动。角色目录应与程序放在同一发布目录中：
+解压后双击 `YimyWalk.exe` 即可启动。当前从托盘打开主菜单并创建桌宠；启动不会自动显示管理窗口或创建实例，普通关闭主菜单会隐藏回托盘。角色目录应与程序放在同一发布目录中：
 
 ```text
 YimyWalk.exe
@@ -78,19 +78,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-character.p
 ```powershell
 # 恢复依赖、运行测试并生成 Windows x64 self-contained 发布包
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-yimywalk.ps1 `
-  -Version 0.1.13 `
+  -Version 0.1.14 `
   -PublishPath artifacts/publish/yimywalk-win-x64
 
 # 检查发布包内容、角色清单和 SHA-256 校验清单
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-release-package.ps1 `
   -Path artifacts/publish/yimywalk-win-x64 `
-  -Version 0.1.13
+  -Version 0.1.14
 ```
 
 只运行 Core 测试：
 
 ```powershell
-.tools/dotnet/dotnet.exe test YimyWalk.sln -c Release --no-restore
+.tools/dotnet/dotnet.exe test tests/YimyWalk.Core.Tests/YimyWalk.Core.Tests.csproj -c Release --no-restore
 ```
 
 发布包还会包含 `PACKAGE_MANIFEST.json`、`PACKAGE_CHECKSUMS.txt`、第三方声明和许可证文件。依赖与上游代码说明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
@@ -122,12 +122,19 @@ YimyWalk 是非盈利项目，允许个人免费使用、下载、学习、修�
 
 ## 当前边界
 
+0.1.14 的修正、测试与真实桌面覆盖见 [`修复记录`](docs/reviews/2026-11-01-remediation.md)。当前单屏 150% 输入与批量资源回归已执行，多屏 / 负坐标真实拓扑 / 拔插 / 睡眠 / 长时间趋势仍有验收边界。
+
 - 目标平台是 Windows x64；其他平台没有发行承诺。
 - 角色目录不会执行脚本、DLL、Shell 命令或远程资源。
 - 当前发布包包含 `slime`、`咿米_Yimy` 和 `咿米_Line`；测试所需的其他角色 fixture 不代表会随正式包发布。
 - 真实桌面上的主动跳跃、侧边攀爬、显示器物理拔插、睡眠恢复和所有 DPI 组合仍需按 [`docs/STATUS.md`](docs/STATUS.md) 中的验证记录理解。
 
 ## 文档
+
+- [`AGENTS.md`](AGENTS.md)：Agent 维护入口与工程约束
+- [`docs/INDEX.md`](docs/INDEX.md)：代码、测试、脚本与文档导航
+- [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md)：当前维护记忆、验证摘要与下一项任务
+- [`docs/reviews/2026-11-01-project-review.md`](docs/reviews/2026-11-01-project-review.md)：本轮审查证据和维护待办
 
 - [`docs/PROJECT_SPEC.md`](docs/PROJECT_SPEC.md)：完整产品规格和工程边界
 - [`docs/CHARACTER_FORMAT.md`](docs/CHARACTER_FORMAT.md)：角色制作与校验格式

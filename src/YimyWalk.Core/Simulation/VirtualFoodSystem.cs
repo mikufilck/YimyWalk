@@ -28,7 +28,6 @@ public sealed class VirtualFoodTarget
 /// </summary>
 public sealed class VirtualFoodSystem
 {
-    private const float TravelSpeed = 180f;
     private const double TargetLifetimeSeconds = 8;
     private const double ConsumeLifetimeSeconds = 0.35;
     private readonly List<VirtualFoodTarget> _targets = new();
@@ -60,19 +59,53 @@ public sealed class VirtualFoodSystem
         if (_targets.Any(item => item.State == VirtualFoodState.Claimed && item.ClaimantId == pet.InstanceId)) return false;
         target.State = VirtualFoodState.Claimed;
         target.ClaimantId = pet.InstanceId;
+        pet.FoodTargetPosition = target.Position;
         return true;
     }
 
-    public void Tick(IEnumerable<PetInstance> pets, double deltaSeconds)
+    public void Prepare(IReadOnlyCollection<PetInstance> pets, bool defaultWalkEnabled)
+    {
+        foreach (var pet in pets) pet.FoodTargetPosition = null;
+        foreach (var target in _targets.Where(target => target.State == VirtualFoodState.Available))
+        {
+            var nearest = pets.Where(pet => CanApproach(pet, target, defaultWalkEnabled)
+                    && !_targets.Any(other => other.State == VirtualFoodState.Claimed && other.ClaimantId == pet.InstanceId))
+                .MinBy(pet => Vector2.DistanceSquared(pet.FootPosition, target.Position));
+            if (nearest is not null) TryClaim(nearest, target.Id);
+        }
+        foreach (var target in _targets.Where(target => target.State == VirtualFoodState.Claimed))
+        {
+            var pet = pets.FirstOrDefault(pet => pet.InstanceId == target.ClaimantId);
+            if (pet is not null && CanApproach(pet, target, defaultWalkEnabled))
+                pet.FoodTargetPosition = target.Position;
+            else Release(target, pet);
+        }
+    }
+
+    private static bool CanApproach(PetInstance pet, VirtualFoodTarget target, bool defaultWalkEnabled)
+        => pet.State is PetState.Idle or PetState.Walk
+            && pet.BehaviorOverrides.ResolveWalkEnabled(defaultWalkEnabled)
+            && Math.Abs(pet.FootPosition.Y - target.Position.Y) <= 2f;
+
+    private static void Release(VirtualFoodTarget target, PetInstance? pet)
+    {
+        target.State = VirtualFoodState.Available;
+        target.ClaimantId = null;
+        if (pet is not null) pet.FoodTargetPosition = null;
+    }
+
+    public void Tick(IEnumerable<PetInstance> pets, double deltaSeconds, bool defaultWalkEnabled = true)
     {
         ArgumentNullException.ThrowIfNull(pets);
-        var delta = Math.Clamp(deltaSeconds, 0, 0.1);
+        var delta = double.IsFinite(deltaSeconds) ? Math.Clamp(deltaSeconds, 0, PetEngine.MaxDeltaSeconds) : 0;
+        if (delta <= 0) return;
         var byId = pets.ToDictionary(pet => pet.InstanceId);
         foreach (var target in _targets.ToArray())
         {
             target.AgeSeconds += delta;
-            if (target.State == VirtualFoodState.Available && target.AgeSeconds >= TargetLifetimeSeconds)
+            if (target.State != VirtualFoodState.Consumed && target.AgeSeconds >= TargetLifetimeSeconds)
             {
+                if (byId.TryGetValue(target.ClaimantId ?? Guid.Empty, out var expiredPet)) expiredPet.FoodTargetPosition = null;
                 _targets.Remove(target);
                 continue;
             }
@@ -85,32 +118,29 @@ public sealed class VirtualFoodSystem
             }
             if (target.State != VirtualFoodState.Claimed || target.ClaimantId is not { } claimantId
                 || !byId.TryGetValue(claimantId, out var pet)
-                || pet.State is not (PetState.Idle or PetState.Walk))
+                || !CanApproach(pet, target, defaultWalkEnabled))
             {
                 if (target.State == VirtualFoodState.Claimed)
                 {
-                    target.State = VirtualFoodState.Available;
-                    target.ClaimantId = null;
+                    Release(target, byId.GetValueOrDefault(target.ClaimantId ?? Guid.Empty));
                 }
                 continue;
             }
 
             var offset = target.Position - pet.FootPosition;
             var distance = offset.Length();
-            if (distance <= TravelSpeed * delta || distance <= 2f)
+            if (distance <= 2f)
             {
-                pet.FootPosition = target.Position;
                 pet.Feed(0.5f);
+                pet.FoodTargetPosition = null;
                 target.State = VirtualFoodState.Consumed;
                 target.ClaimantId = pet.InstanceId;
                 target.VisibleScale = 1f;
                 continue;
             }
 
-            var step = offset / distance * TravelSpeed * (float)delta;
-            pet.FootPosition += step;
-            pet.Facing = step.X < 0 ? FacingDirection.Left : FacingDirection.Right;
-            pet.State = PetState.Walk;
+            // Motion belongs to PetEngine. This system only owns target intent
+            // and consumption, never pet position, velocity or movement state.
         }
     }
 

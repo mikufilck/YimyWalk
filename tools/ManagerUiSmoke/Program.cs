@@ -19,16 +19,14 @@ internal static class Program
             RunPreviewPixelRegression(app);
             return 0;
         }
-        host = Activator.CreateInstance(app.GetType("YimyWalk.App.Host.AppHost")!, true)!;
         var temp = Path.Combine(Path.GetTempPath(), "YimyWalk-manager-smoke-" + Guid.NewGuid().ToString("N"));
+        host = Activator.CreateInstance(app.GetType("YimyWalk.App.Host.AppHost")!, new object[] { temp })!;
         var characterTemp = Path.Combine(Path.GetTempPath(), "YimyWalk-manager-characters-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(characterTemp);
         CopyCharacterFixture("slime", characterTemp);
         CopyCharacterFixture("cat", characterTemp);
         SetProp(host, "CharacterRootOverride", characterTemp);
         // Isolate all saves from the user's settings, including failure cases.
-        var store = Activator.CreateInstance(app.GetType("YimyWalk.App.Settings.SettingsStore")!, new object[] { temp });
-        host.GetType().GetField("_settingsStore", Flags)!.SetValue(host, store);
         try
         {
             Call(host, "Start");
@@ -199,7 +197,7 @@ internal static class Program
             using var preview = (Control)Activator.CreateInstance(previewType, new[] { cache })!;
             preview.Size = new Size(dpiSize, dpiSize);
             preview.CreateControl();
-            previewType.GetMethod("ShowIdleFrame", Flags)!.Invoke(preview, new object?[] { definition, 2f });
+            previewType.GetMethod("ShowIdleFrame", Flags)!.Invoke(preview, new object?[] { definition });
             using var rendered = new Bitmap(preview.ClientSize.Width, preview.ClientSize.Height);
             preview.DrawToBitmap(rendered, preview.ClientRectangle);
             foreach (var marker in new[] { Color.Red, Color.Lime, Color.Blue, Color.Magenta })

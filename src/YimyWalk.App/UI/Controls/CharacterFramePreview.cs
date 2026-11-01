@@ -8,6 +8,7 @@ internal sealed class CharacterFramePreview : UserControl
     private readonly FrameSurfaceCache _cache;
     private CharacterDefinition? _definition;
     private RenderedSurface? _surface;
+    private SurfaceLease? _surfaceLease;
 
     public CharacterFramePreview(FrameSurfaceCache cache)
     {
@@ -21,9 +22,9 @@ internal sealed class CharacterFramePreview : UserControl
     }
 
     public CharacterDefinition? Definition => _definition;
-    public int? CurrentFrameIndex => _surface is null ? null : 0;
+    public int? CurrentFrameIndex => _surface?.FrameIndex;
 
-    public void ShowIdleFrame(CharacterDefinition? definition, float scale = 2f)
+    public void ShowIdleFrame(CharacterDefinition? definition)
     {
         if (ReferenceEquals(_definition, definition) && _surface is not null) return;
         ReleaseCurrent();
@@ -37,7 +38,8 @@ internal sealed class CharacterFramePreview : UserControl
             // SelectFrame(..., 0) is the required idle1/index 0 preview frame.
             // Keep the source at its original pixel resolution. Preview sizing
             // is a presentation concern and must not change pet/definition scale.
-            _surface = _cache.Get(definition, frame, mirrored: false, 1f);
+            _surfaceLease = _cache.Acquire(definition, frame, mirrored: false, 1f);
+            _surface = _surfaceLease.Surface;
             Invalidate();
         }
         catch
@@ -55,6 +57,8 @@ internal sealed class CharacterFramePreview : UserControl
 
     private void ReleaseCurrent()
     {
+        _surfaceLease?.Dispose();
+        _surfaceLease = null;
         if (_definition is not null) _cache.ReleaseDefinition(_definition);
         _definition = null;
         _surface = null;

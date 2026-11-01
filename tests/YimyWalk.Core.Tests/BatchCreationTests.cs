@@ -4,6 +4,19 @@ namespace YimyWalk.Core.Tests;
 
 public sealed class BatchCreationTests
 {
+    [Fact]
+    public void HugeBatchKeepsOnlyACompactRequestAndCanBeCancelled()
+    {
+        var queue = new YimyWalk.Core.Simulation.BatchRequestQueue<int>();
+        var created = 0;
+        queue.Enqueue(() => ++created, int.MaxValue);
+        Assert.Equal(int.MaxValue, queue.PendingCount);
+        Assert.Throws<OverflowException>(() => queue.Enqueue(() => 0, 1));
+        Assert.Equal(2, queue.Drain(2, _ => { }));
+        Assert.Equal(2, created);
+        queue.Cancel();
+        Assert.Equal(0, queue.PendingCount);
+    }
     [Theory]
     [InlineData(1)]
     [InlineData(10)]

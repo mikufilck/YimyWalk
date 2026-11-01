@@ -1,4 +1,90 @@
-> **最新交接优先**：当前仓库结构以本页 2026-10-12 清理记录为准；产品行为以对应日期的最后交接为准。旧任务栏、上游目录和构建脚本描述是历史记录。
+> **最新相关交接优先**：当前短摘要见 [`MAINTENANCE.md`](MAINTENANCE.md)，结构导航见 [`INDEX.md`](INDEX.md)。本文件按日期记录证据；先读顶部，再按功能定位最新相关条目。旧测试结果只适用于当时的代码、环境与范围。
+
+# 2026-11-01 R01–R13 修复与 0.1.14 验证
+
+**授权与范围**：用户要求处理审查发现的所有问题，并授权必要测试。本轮处理 R01–R13 与执行中发现的 UI / smoke 缺陷；原审查的需求扩展差距不作为已经实现的功能。详细改动与证据映射见 [`reviews/2026-11-01-remediation.md`](reviews/2026-11-01-remediation.md)。保留此前工作区改动，原始 PROJECT_SPEC 和历史设计不改，未提交 / 未推送。
+
+**代码已实现**：设置恢复后的备份保全（含备用写入路径）；同 ID 定义与失败创建的租约清理；拒读 / 中断扫描事务；食物与物理统一推进、暂停 / 实例覆盖 / 速度 / 超时；最终像素上限与 64 MiB 缓存预算、在用 surface handle；GDI 分步失败清理与结果检查；透明食物 / 气泡和落脚排除；单调时钟、有限日志、故障隔离；统一 2000 px/s 上限、无聊有界影响 Idle、版本单一真源；所有完整宿主 smoke 的设置与日志隔离。新增 Windows App.Tests 项目和 CI Windows 适配层 job。
+
+**依赖处理**：ImageSharp 3.1.12 的安全修复版 3.2.0 在本机实跑触发许可证缺失，未绕过校验。改用 StbImageNext 1.0.0 和受限 PNG 边界，检查格式、大小、尺寸、CRC 和解压预算；同步许可证 / manifest。三套正式素材未修改；3 个正式 PNG 与 6 个透明 / 灰度 / 调色板 / Adam7 夹具对旧解码逐像素一致（`PNG_COMPATIBILITY_PASS CASES=9`）。旧 DLL 只用于忽略目录内的可信样本比较。
+
+**构建通过**：`dotnet build YimyWalk.sln -c Release --no-restore` 最终为 **0 警告 / 0 错误**。所有桌面工具编译通过。本地 SDK 8.0.426，版本由 Directory.Build.props 统一为 0.1.14；默认参数发布 / 验包通过，`PACKAGE PASS VERSION=0.1.14 FILES=13 CHECKSUMS=12`。`dotnet list YimyWalk.sln package --vulnerable --include-transitive` 对五个项目均报告当前源无已知易受攻击包，不代表未来风险为零。
+
+**Core 测试通过**：`scripts/test-yimywalk.ps1` 及发布流程实跑 **Core 164 / App 16 通过，0 失败、0 跳过**。App 包括真实临时 PNG 的 ACL 拒读、真实 GetHbitmap 失败后的 GDI 回落，以及五种注入获取失败 / 缓存预算 / 设置两条写入路径 / 宿主失败取消回归。测试使用自己创建的沙盒目录，不操作用户桌面文件或偏好。
+
+**Windows 桌面已验证（仅当前会话范围）**：Windows 11 x64、单屏 2560×1600、工作区 2560×1528、144 DPI / 150%。ManagerUiSmoke 基础、完整模式、像素模式通过；输入 smoke 最终 `RESULT PASS`，包括真实透明 / 实体路由、拖拽抛掷、焦点、托盘、食物消费与退出清理；FoodWindow / BubbleWindow 的鼠标实际穿过到独立进程且底层焦点保持。实际 EnumWindows 候选确认辅助窗口不落脚、不遮挡。
+
+`desktop-smoke -Rounds 3 -Role slime -Targeted -Landing` 通过窗口顶面落脚、支撑关闭后重新下落，以及三轮 1/10/50/100 创建清空；三轮各档清空 GDI 均回到 44，最后 Dispose 后 GDI 为 38。另一次带缓存字节检查的 1/10/50/100 回归通过，100 实例时缓存记录 5,896,935 字节，清空缓存与在用 surface 字节均为 0。该数字是短测试当时采样，不代表最大工作集或长期性能承诺。
+
+**Windows 桌面未验证**：多屏 inventory 和完整矩阵都实跑返回 `UNVERIFIED TWO_EXTENDED_DISPLAYS_REQUIRED`（退出 2），当前只有一块显示器。双屏 / 真实负坐标、物理拔插、睡眠唤醒、全部 OS DPI 组合、长时间资源仍未验证；UI 像素计算的 96/120/144/192 DPI 不替代 OS 切换。CI 配置已改，尚未推送执行。
+
+**测试中纠正的附加问题**：150% DPI 详情说明横向溢出已修复，保持原布局断言；DesktopSmoke 改 STA + 生产 DPI 初始化，落脚探针保证自身可见；输入背景先通过真实点击建立可见 / 焦点前置，避免自身 TopMost 掩住宠物。食物测试夹具按真实行走速度布置，继续要求进入 Eat；未验证结果不再同时打印 PASS。Windows PowerShell 5.1 的中文脚本保留 UTF-8 BOM，修正一次验包的中文路径误读。早期失败日志保留其失败状态，不作为通过证据。
+
+**交付与下一项**：本地便携目录 `artifacts/remediation-20261101/publish/`、完整归档 `YimyWalk-0.1.14-win-x64.zip` 及 `.zip.sha256` 位于同级任务目录；归档 13 个文件逐字节与验包目录比对通过。文档本地链接 / 锚点检查通过，原素材、原始规格和历史设计的 27 个受保护文件哈希未变。补充验证食物容量达到 32 后给出可读提示、不弹异常。R01–R13 当前代码问题已处理；后续从用户待说明的扩展要求开始，硬件验收边界另行保留，避免按修复前清单重复改动。
+
+# 2026-11-01 全项目复核与长期维护记忆落地
+
+**范围与基线**：`codex/bootstrap` @ `7a0fb13`；开工已有 `AGENTS.md`、本文件的未提交修改，以及未跟踪的 INDEX / TECHNICAL_REVIEW，本轮保留并继续整理。覆盖 Core / App / Tests / 五个工具 / 脚本 / CI / 角色包 / 文档与第三方声明；关键调用链静态核对配合实跑，不声称逐行无遗漏或所有需求已验收。
+
+**记忆调整**：新增 [`MAINTENANCE.md`](MAINTENANCE.md) 当前维护摘要、[`reviews/2026-11-01-project-review.md`](reviews/2026-11-01-project-review.md) 审查证据与 R01–R13 待办；AGENTS 增加分段读取、证据分级和中断交接协议；INDEX 保留代码 / 测试 / 工具地图，移除重复的动态通过表、角色参数和旧债务正文，用链接指向各自详细落点。README、ARCHITECTURE、TESTING、CHARACTER_FORMAT 同步真实入口与已确认事实；旧 TECHNICAL_REVIEW 增加历史快照提示，正文保留供追溯。原始 PROJECT_SPEC 与历史设计 / 计划未改。
+
+**纠正的当前行为**：实际启动管理器隐藏、不自动创建宠物；普通关闭隐藏回托盘，显式退出才结束宿主。气泡总闸实际持久化；实例覆盖 / 位置 / 数量不持久化。App 仍有 UTC 墙钟路径；帧缓存每个 surface 持有租约，不是每定义只有一个。三套随包角色都为 1254×1254 / 单格 418×418，刷新界面已有实现。原始需求中的无聊驱动、完整事件调度 / 图标分身 / actions / 勿扰 / 实例恢复 / 右键菜单等缺口已登记，未改写成“完成”。
+
+**已复现但未修复**：无窗口工作区沙盒探针确认四种问题：① 关闭走动后食物仍将宠物移动 18px / 0.1s 并置为 Walk；② session 暂停后食物继续同样移动；③ 同 ID 新定义覆盖导致旧定义所有者未释放；④ 从备份恢复后再次保存，会把损坏的主文件覆盖到原合法备份。复现调用、预期修复与验收见审查 §2–§3；探针退出 0 表示预期缺陷已观测，不表示功能正常，也不计入 Core 用例数。
+
+**额外发现**：DesktopSmoke 的临时 SettingsStore 只用于单独自检，没有注入随后创建的 AppHost；DesktopInputSmoke 同样使用默认用户设置，并会更改全局偏好（R13）。已补 TESTING 的隔离边界；本轮没有运行这些工具或触碰真实用户偏好。DesktopDisplaySmoke 是复用生产组件的独立 Harness，不覆盖完整 AppHost 生命周期。
+
+**四档状态（本轮亲自实跑）**：
+
+1. **代码已实现**：本轮落实的是维护记忆、索引与审查文档；产品源码、测试断言、脚本、依赖和素材无改动。登记问题保持待修。
+2. **构建通过**：环境自检退出 0，本地 SDK 8.0.426；`dotnet build YimyWalk.sln -c Release --no-restore` 为 0 错误 / 12 警告（ImageSharp 3.1.12 NU1902 / NU1903）。四个外部 smoke 工具单独 x64 Release 编译均退出 0。`build-yimywalk.ps1 -Version 0.1.13 -PublishPath artifacts/maintenance-20261101/publish` 与验包通过，`PACKAGE PASS VERSION=0.1.13 FILES=13 CHECKSUMS=12`；三套正式角色经 `validate-character.ps1` 校验均退出 0。
+3. **Core 测试通过**：`scripts/test-yimywalk.ps1` 实跑 **148 通过 / 0 失败 / 0 跳过**，发布流程中再次通过。没有通过删除或削弱断言隐藏新发现。
+4. **Windows 桌面未验证**：本轮未启动 AppHost、桌面 smoke、ManagerUiSmoke 或发布 EXE；没有测点击 / 焦点 / 拖拽 / DPI / 多屏 / 长期资源。四个工具编译与无窗口探针不能替代真机验收。历史桌面记录保留原边界。
+
+**证据位置**：本机 `artifacts/maintenance-20261101/` 保存源码哈希清单、构建 / 发布 / 角色校验日志、探针源码与结果；该目录被忽略，不保证在别的工作区存在。审查文档保留命令、结果与复现步骤。受控 `.cs` 文件重新盘点为 80 个 / 10,874 行，按 `git ls-files` 排除生成与临时文件，口径与旧评审数字不混用。
+
+**文档与范围复核**：检查 10 份本轮文档中的 93 个本地链接 / 锚点，均可解析；Core / App / 测试的受控 C# 文件名均可在 INDEX 定位。开工清单中的 139 个产品 / 测试 / 工具 / 脚本 / 素材 / 规格与历史文件哈希保持不变，`git diff --check` 通过。辅助检查结果保存在 `docs-check.json`。
+
+**下一项可执行任务**：R03 设置备份保全，先用注入目录建立“主文件损坏→备份恢复→保存→再次损坏仍能恢复”的回归，再修 Save 的备份来源；保持当前整份配置校验契约。随后处理 R01 缓存预算、R02 GDI 失败清理，并在对应桌面工具执行前解决 R13 设置隔离。未自动扩展到这些产品修复；本轮未提交、未推送。
+
+# 2026-10-16 全项目技术评审（只读，未改产品代码）
+
+**范围**：对 `codex/bootstrap` @ `7a0fb13` 做全仓实现审查 —— 98 个 C# 文件 / 11,091 行（Core 2,561 / App 3,832 / Tests 2,637 / Tools 2,061），盘点 M0–M4 各功能实现并回答"是否需要重构"。产物见 [`docs/TECHNICAL_REVIEW.md`](TECHNICAL_REVIEW.md)。
+
+**结论**：**不需要整体重写，需要一次有边界的"缺陷修复 + 结构收敛"重构**。分层边界、依赖注入、测试基础设施是资产；问题集中在两个上帝类（`AppHost` 24 成员/11 职责、`PetEngine.Tick` 131 行）、无上限的位图缓存、以及若干可追溯缺陷。
+
+**本轮由评审者亲自核对为可追溯的缺陷**（其余为静态分析或疑似）：`LayeredWindowRenderer` 的 GDI 获取步骤在 `try` 之外；`UpdateLayeredWindow` 返回值被丢弃；`FrameSurfaceCache` 缩放无上限且无淘汰；`VirtualFoodSystem` 直接写 `PetInstance.FootPosition`/`State`（双写者并绕过走动门控）；`FoodWindow` 缺 `WndProc` 导致吞点击；设置文档单字段非法即整份回滚；`CharacterLoader` 异常过滤器不含 `UnauthorizedAccessException` 而 `CharacterCatalog.Scan` 只捕 `CharacterLoadException`；`PetSession.GetOrAddLease` 覆盖同键租约不释放；`MainForm` 从未赋值；`Boredom` 为只写状态；`CharacterFramePreview.ShowIdleFrame` 的 `scale` 参数被忽略、`CurrentFrameIndex` 恒为 0（使 `DesktopInputSmoke` 的对应断言恒真）；行走速度上限 1000（`PetEngine`，9 处）与 2000（`CharacterLoader`）不一致；全仓无任何运行期日志。
+
+**验证档位**：① 代码已实现 —— 未改动，不适用；② 构建通过 / ③ Core 测试通过 —— 沿用同日早先一次实测（构建 0 错误 / 148 测试通过），本轮**未重跑**；④ **Windows 桌面未验证 —— 评审未执行任何 `desktop-*` smoke**。
+
+**未验证边界**：评审为只读静态审查。所有标 `❓疑似` 的条目（内存曲线、点击穿透的实际观感、帧循环异常后的弹窗行为、气泡窗口被当作落脚面）**均未复现**；`TECHNICAL_REVIEW.md` 的 A3 内存数字是静态算术上界而非实测；文档与代码的类型名差异未逐类型穷举。**不要把该文档的缺陷清单当作已确认或已修复。**
+
+**边界**：本轮只新增一份文档并登记进 `docs/INDEX.md`，**未改动任何产品代码、角色素材或构建脚本**。
+
+# 2026-10-16 仓库索引与 Agent 记忆结构
+
+**动机**：仓库原本没有"要改 X → 去哪个文件"的单一入口，每次新会话都要重新全仓库检索；规则又散落在 `AGENTS.md`、`docs/` 与测试断言里，容易被后来的会话漏读。
+
+**新增**：`docs/INDEX.md` —— 仓库索引（顶层地图、依赖图、Core/App 模块地图、测试地图、工具与脚本参数表、文档地图、角色格式速查、常用命令、验证状态表、改动落点 checklist、已知维护债务 10 条）。
+
+**重构**：`AGENTS.md` 由 11 行扩为分层入口：开工顺序 → 记忆分层表 → 硬约束（验证口径四档 / 架构铁律 / 产品边界 / 仓库卫生）→ 命令 → 改完代码后 checklist。原有约束文字全部保留。
+
+**本轮实测（本机，非文档转抄）**：
+
+- 环境：`global.json` 锁 SDK `8.0.425`，本机系统 SDK 为 8.0.423 / 10.0.302，**均不满足**（直接报 `A compatible .NET SDK was not found`）。运行 `scripts/bootstrap-dotnet.ps1` 装出工作区本地 SDK **8.0.426**，之后全部命令可用。此项此前未在文档中标为"必需前置"。
+- `scripts/verify-environment.ps1`：退出码 0；报告 `Workspace .NET: 8.0.426`。
+- `dotnet restore YimyWalk.sln`：通过（4 个项目）。
+- `dotnet build YimyWalk.sln -c Release --no-restore`：**0 错误 / 10 警告**，全部为既有 NU1902 / NU1903（ImageSharp 3.1.12 安全通告）。
+- `dotnet test YimyWalk.sln -c Release --no-restore`：**148/148 通过**（`Failed: 0, Skipped: 0`），与既有交接一致。
+- `scripts/build-yimywalk.ps1 -Version 0.1.13 -PublishPath artifacts/publish/yimywalk-win-x64`：退出码 0，内含 148/148 测试。
+- `scripts/test-release-package.ps1 -Path artifacts/publish/yimywalk-win-x64 -Version 0.1.13`：`PACKAGE PASS VERSION=0.1.13 FILES=13 CHECKSUMS=12`。
+- `scripts/validate-character.ps1 -Path .\Characters\slime -PreviewPath .\artifacts\slime-preview.png`：退出码 0。
+
+**新记录的素材事实**：`Characters/slime/sprite.png` 实测为 **1254×1254、单格 418×418、759,399 字节、SHA-256 `BC92811F…`**，与 `docs/CHARACTER_FORMAT.md` 的叙述（似乎把小尺寸示例图当作 `slime`）不符；`tools/GenerateTestCharacters.ps1` 生成的是 96×96，说明当前 `slime` 素材不是该脚本产物。两个咿米角色的哈希（`63CE5BF9…` / `EDB50E55…`）与本页 2026-10-13 记录一致。
+
+**未验证**：本轮**未执行任何 Windows 桌面验收**（`desktop-smoke` / `desktop-input-smoke` / `desktop-display-smoke`），也未复核历史桌面结论；透明区域穿透、实体命中、焦点保持、多显示器/DPI、负坐标屏、拔插显示器、睡眠/唤醒、长期 CPU/内存/句柄趋势、权限受限会话继续保持原有未验证状态。索引第 12 节的"已知维护债务"来自本轮只读代码勘察（其中 `docs/` 与代码的类型名差异、未接线成员、空文件等已用静态检索核实），未逐条运行时复现。
+
+**边界**：本轮只新增/改写文档（`docs/INDEX.md`、`AGENTS.md`、本条目），**未改动任何产品代码、角色素材或构建脚本**。
 
 # 2026-10-13 管理界面标题间距修正
 

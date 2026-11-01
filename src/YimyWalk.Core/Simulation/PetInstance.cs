@@ -28,6 +28,7 @@ public sealed class PetInstance
     public float StateTime { get; internal set; }
     public float AnimationTime { get; internal set; }
     public bool IsDragging => State == PetState.Dragged;
+    internal Vector2? FoodTargetPosition { get; set; }
     public float Hunger { get; private set; }
     public float Boredom { get; private set; }
     public PetBehaviorOverrides BehaviorOverrides { get; set; } = PetBehaviorOverrides.Inherit;

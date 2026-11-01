@@ -8,19 +8,36 @@ using System.Windows.Forms;
 internal static class Program
 {
 [STAThread]
-private static void Main()
+private static void Main(string[] args)
 {
 ApplicationConfiguration.Initialize();
+if (args.Length == 3 && args[0] == "--passive-probe")
+{
+    using var clicked = EventWaitHandle.OpenExisting(args[2]);
+    using var passiveProbe = new ProbeForm { TopMost = true, Bounds = Screen.PrimaryScreen!.WorkingArea };
+    passiveProbe.MouseDown += (_, _) => clicked.Set();
+    using var stop = new System.Windows.Forms.Timer { Interval = 100 };
+    stop.Tick += (_, _) => { if (File.Exists(args[1] + ".stop")) passiveProbe.Close(); };
+    passiveProbe.Shown += (_, _) => { File.WriteAllText(args[1], "ready"); stop.Start(); };
+    Application.Run(passiveProbe);
+    return;
+}
 var savedCursor = Cursor.Position;
 using var probe = new ProbeForm();
+probe.TopMost = true;
 probe.Bounds = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1280, 720);
 probe.Show();
+Native.SetCursorPos(probe.Left + 20, probe.Top + 20);
+Native.MouseClick();
+Pump(100);
+probe.TopMost = false;
 probe.Activate();
 Pump(100);
 
 var app = Assembly.Load("YimyWalk.App");
 var hostType = app.GetType("YimyWalk.App.Host.AppHost", throwOnError: true)!;
-var host = Activator.CreateInstance(hostType, nonPublic: true)!;
+var hostSettingsRoot = Path.Combine(Path.GetTempPath(), "YimyWalkSmokeSettings-" + Guid.NewGuid().ToString("N"));
+var host = Activator.CreateInstance(hostType, new object[] { hostSettingsRoot })!;
 var characterTemp = Path.Combine(Path.GetTempPath(), "YimyWalkDesktopInputSmoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(characterTemp);
 CopyCharacterFixture("slime", characterTemp);
@@ -329,10 +346,31 @@ try
     Pump(50);
     Require((int)Property(host, "VirtualFoodCount") > 0, "virtual food entry creates a target");
     Console.WriteLine("MANAGER VIRTUAL_FOOD_CREATE=PASS");
-    Invoke(hostType, host, "CreateMany", "cat", 1);
+    var foodWindow = ((System.Collections.IDictionary)PrivateField(host, "_foodWindows")).Values.Cast<Form>().Single();
+    var foodPoint = new Point(foodWindow.Left + 10, foodWindow.Top + 10);
+    Require(Native.SendHitTest(foodWindow.Handle, foodPoint) == new IntPtr(-1), "food hit test is transparent");
+    Require(Native.SendMessage(foodWindow.Handle, 0x0021, IntPtr.Zero, IntPtr.Zero) == new IntPtr(3), "food does not activate");
+    VerifyPassiveWindowsAcrossProcesses(app, hostSettingsRoot);
+    var foodArea = Property(Property(session, "Surface"), "SpawnArea");
+    var foodStart = new System.Numerics.Vector2((float)Property(foodArea, "Left") + (float)Property(foodArea, "Width") * 0.5f - 60,
+        (float)Property(foodArea, "Bottom"));
+    var createFoodPet = session.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
+        .Single(method => method.Name == "Create" && method.GetParameters().Length == 2);
+    createFoodPet.Invoke(session, new object[] { "cat", foodStart });
     Pump(100);
     var virtualFoodPet = First(Property(windowsRegistry, "Windows"));
     var virtualFoodInstance = Property(virtualFoodPet, "Instance");
+    Invoke(hostType, host, "RefreshWindowSurfaces");
+    var surfaceCandidates = ((System.Collections.IEnumerable)Property(host, "WindowSurfaceCandidates")).Cast<object>().ToArray();
+    var auxiliaryWindows = ((System.Collections.IDictionary)PrivateField(host, "_bubbleWindows")).Values.Cast<Form>().Append(foodWindow);
+    foreach (var auxiliary in auxiliaryWindows)
+    {
+        var id = auxiliary.Handle.ToInt64().ToString("X", System.Globalization.CultureInfo.InvariantCulture);
+        var candidate = surfaceCandidates.Single(item => string.Equals((string)Property(item, "Id"), id, StringComparison.OrdinalIgnoreCase));
+        Require((bool)Property(candidate, "IsExcluded"), "auxiliary window is excluded from landing");
+        Require(!(bool)Property(candidate, "IsOcclusionBlocker"), "auxiliary window does not occlude landing surfaces");
+    }
+    Console.WriteLine("HOST_AUXILIARY_WINDOWS_EXCLUDED=PASS");
     WaitUntil(() => (int)Property(host, "VirtualFoodCount") == 0, 10000, "virtual food is consumed or times out");
     Require(string.Equals(State(virtualFoodInstance), "Eat", StringComparison.Ordinal), "virtual food reaches eating state");
     Console.WriteLine("MANAGER VIRTUAL_FOOD_LIFECYCLE=PASS");
@@ -458,9 +496,10 @@ finally
     Pump(100);
     Cursor.Position = savedCursor;
     if (Directory.Exists(characterTemp)) Directory.Delete(characterTemp, true);
+    if (Directory.Exists(hostSettingsRoot)) Directory.Delete(hostSettingsRoot, true);
 }
 
-Console.WriteLine("RESULT PASS");
+Console.WriteLine(Environment.ExitCode == 0 ? "RESULT PASS" : "RESULT UNVERIFIED INPUT_ROUTING_BLOCKED");
 }
 
 static object Invoke(Type type, object target, string name, params object[] args)
@@ -529,6 +568,45 @@ static void Pump(int milliseconds)
 static void Require(bool condition, string description)
 {
     if (!condition) throw new InvalidOperationException($"FAIL: {description}");
+}
+
+static void VerifyPassiveWindowsAcrossProcesses(Assembly app, string sandbox)
+{
+    var ready = Path.Combine(sandbox, "passive-probe.ready");
+    var eventName = "Local\\YimyWalkPassive-" + Guid.NewGuid().ToString("N");
+    using var clicked = new EventWaitHandle(false, EventResetMode.AutoReset, eventName);
+    var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
+    if (Path.GetFileNameWithoutExtension(Environment.ProcessPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+        start.ArgumentList.Add(typeof(Program).Assembly.Location);
+    start.ArgumentList.Add("--passive-probe"); start.ArgumentList.Add(ready); start.ArgumentList.Add(eventName);
+    using var child = Process.Start(start)!;
+    try
+    {
+        WaitUntil(() => File.Exists(ready), 5000, "separate-process input probe ready");
+        var area = Screen.PrimaryScreen!.WorkingArea;
+        var point = new Point(area.Left + 80, area.Top + 80);
+        foreach (var typeName in new[] { "FoodWindow", "BubbleWindow" })
+        {
+            object[] constructor = typeName == "FoodWindow" ? new object[] { point } : new object[] { "click-through", point };
+            using var window = (Form)Activator.CreateInstance(app.GetType("YimyWalk.App.Windows." + typeName)!, constructor)!;
+            window.TopMost = true;
+            window.Show();
+            Pump(60);
+            clicked.Reset();
+            Native.SetCursorPos(point.X + 5, point.Y + 5);
+            var before = Native.GetForegroundWindow();
+            Native.MouseClick();
+            Pump(120);
+            Require(clicked.WaitOne(0), typeName + " click reaches a different process");
+            Require(Native.GetForegroundWindow() == before, typeName + " preserves underlying focus");
+            Console.WriteLine("PASSIVE_WINDOW " + typeName + " CROSS_PROCESS_CLICK_FOCUS=PASS");
+        }
+    }
+    finally
+    {
+        File.WriteAllText(ready + ".stop", "stop");
+        if (!child.WaitForExit(3000)) { child.Kill(); child.WaitForExit(); }
+    }
 }
 
 static void ClickTrayMenuItem(NotifyIcon icon, string text)
@@ -602,7 +680,6 @@ static class Native
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, StringBuilder text, int capacity);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int capacity);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
     [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extraInfo);
@@ -621,10 +698,8 @@ static class Native
     public static string Describe(IntPtr hwnd)
     {
         var klass = new StringBuilder(256);
-        var title = new StringBuilder(256);
         GetClassName(hwnd, klass, klass.Capacity);
-        GetWindowText(hwnd, title, title.Capacity);
-        return $"{hwnd} class={klass} title={title} rect={(GetWindowRect(hwnd, out var rect) ? rect.ToString() : "<none>")}";
+        return $"{hwnd} class={klass} rect={(GetWindowRect(hwnd, out var rect) ? rect.ToString() : "<none>")}";
     }
     [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left, Top, Right, Bottom; public override string ToString() => $"({Left},{Top})-({Right},{Bottom})"; }
 }

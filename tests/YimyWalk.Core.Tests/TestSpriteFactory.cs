@@ -1,5 +1,4 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using YimyWalk.Core.Imaging;
 using YimyWalk.Core.Characters;
 
 namespace YimyWalk.Core.Tests;
@@ -23,7 +22,7 @@ internal static class TestSpriteFactory
     {
         var directory = Path.Combine(Path.GetTempPath(), "YimyWalkTests", Guid.NewGuid().ToString("N"), id ?? "role");
         Directory.CreateDirectory(directory);
-        using var image = new Image<Rgba32>(width, height, new Rgba32(0, 0, 0, 0));
+        using var image = new PngImage(width, height, new Rgba32(0, 0, 0, 0));
         if (!fullyTransparent)
         {
             for (var y = 0; y < height; y++)
@@ -47,7 +46,7 @@ internal static class TestSpriteFactory
     {
         var directory = Path.Combine(Path.GetTempPath(), "YimyWalkTests", Guid.NewGuid().ToString("N"), "opaque");
         Directory.CreateDirectory(directory);
-        using var image = new Image<Rgb24>(width, height, new Rgb24(40, 180, 80));
+        using var image = new PngImage(width, height, new Rgba32(40, 180, 80), hasAlpha: false);
         image.SaveAsPng(Path.Combine(directory, "sprite.png"));
         return directory;
     }

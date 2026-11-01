@@ -14,6 +14,7 @@ internal sealed class BubbleWindow : Form
         TopMost = true;
         AutoSize = true;
         BackColor = Color.LemonChiffon;
+        Opacity = 0.99;
         Padding = new Padding(7, 4, 7, 4);
         _label = new Label { AutoSize = true, MaximumSize = new Size(240, 0), Text = text, ForeColor = Color.Black };
         Controls.Add(_label);
@@ -27,7 +28,8 @@ internal sealed class BubbleWindow : Form
         get
         {
             var parameters = base.CreateParams;
-            parameters.ExStyle |= NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE;
+            parameters.ExStyle |= NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE
+                | NativeMethods.WS_EX_LAYERED | NativeMethods.WS_EX_TRANSPARENT;
             return parameters;
         }
     }

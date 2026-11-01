@@ -12,13 +12,14 @@ The upstream repository contains code, NuGet references, and many pet images/aud
 
 The upstream README credits NAudio and several sprite authors. The historical audit record is in [`docs/UPSTREAM_AUDIT.md`](docs/UPSTREAM_AUDIT.md); the source is obtained only in an external temporary checkout when a new audit is needed.
 
-## SixLabors.ImageSharp 3.1.12
+## StbImageNext 1.0.0
 
-- Package: `SixLabors.ImageSharp` 3.1.12
-- Source: <https://github.com/SixLabors/ImageSharp>
-- License: Six Labors Split License 1.0 (Apache 2.0 for qualifying open-source/source-available, qualifying lower-revenue or nonprofit use; other direct commercial use may require the Six Labors commercial license).
-- Use in YimyWalk: decode `sprite.png` into platform-neutral RGBA frame buffers in `YimyWalk.Core`.
-- The complete license text shipped with the source and release package is in `licenses/ImageSharp-LICENSE.txt`; the Apache 2.0 text referenced by the split license is in `licenses/Apache-2.0.txt`.
+- Package: `StbImageNext` 1.0.0, no package dependencies for net8.0.
+- Source: <https://github.com/StbSharp/StbImageNext>; package repository commit `f350d0c0e6dccf155ce77f3422c485073a0b5449`.
+- Authors: StbImageSharpTeam; upstream stb contributors.
+- NuGet metadata declares `Unlicense OR MIT`; this distribution selects Unlicense. Full text and attribution: `licenses/StbImageNext-LICENSE.txt`.
+- Use: managed PNG decoding behind Core's PNG-only input validation. Other formats supported by the dependency are not exposed as character inputs. PNG preview writing uses .NET compression and the project's own PNG chunk writer.
+- Previous ImageSharp 3.1.12 was removed from product, validator and test dependency graphs on 2026-11-01. The isolated compatibility probe may reference its existing local DLL for trusted fixtures; that probe is excluded from the source solution and release package. No license validation is disabled or bypassed.
 
 ## YimyWalk sample roles
 

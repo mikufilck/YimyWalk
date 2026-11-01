@@ -7,17 +7,20 @@ namespace YimyWalk.App.Host;
 internal sealed class DesktopWorldSurface : IWorldSurface
 {
     private static readonly WorldRect FallbackArea = new(0, 0, 1280, 720);
-    private readonly WindowsDisplayAdapter _adapter = new();
+    private readonly WindowsDisplayAdapter _adapter;
+    private readonly IMonotonicClock _clock;
     private readonly WindowSurfaceResolver _windowSurfaces;
     private DisplaySnapshot _snapshot;
-    private DateTime _nextRefreshUtc;
+    private double _nextRefreshSeconds;
 
-    public DesktopWorldSurface()
+    public DesktopWorldSurface(IMonotonicClock? clock = null, IAppLog? log = null)
     {
+        _clock = clock ?? StopwatchClock.Instance;
+        _adapter = new WindowsDisplayAdapter(log);
         _snapshot = _adapter.Capture();
-        _nextRefreshUtc = DateTime.UtcNow.AddSeconds(1);
+        _nextRefreshSeconds = _clock.Seconds + 1;
         _windowSurfaces = new WindowSurfaceResolver(point =>
-            GetSnapshot().Resolve(point)?.WorkingArea ?? FallbackArea);
+            GetSnapshot().Resolve(point)?.WorkingArea ?? FallbackArea, _clock, log);
     }
 
     public IDisplayProvider DisplayProvider => GetSnapshot();
@@ -73,21 +76,21 @@ internal sealed class DesktopWorldSurface : IWorldSurface
     public void RefreshNow()
     {
         _snapshot = _adapter.Capture();
-        _nextRefreshUtc = DateTime.UtcNow.AddSeconds(1);
+        _nextRefreshSeconds = _clock.Seconds + 1;
     }
 
     public void RefreshForWindow(IntPtr windowHandle)
     {
         _snapshot = _adapter.Capture(windowHandle);
-        _nextRefreshUtc = DateTime.UtcNow.AddSeconds(1);
+        _nextRefreshSeconds = _clock.Seconds + 1;
     }
 
     private DisplaySnapshot GetSnapshot()
     {
-        if (DateTime.UtcNow >= _nextRefreshUtc)
+        if (_clock.Seconds >= _nextRefreshSeconds)
         {
             _snapshot = _adapter.Capture();
-            _nextRefreshUtc = DateTime.UtcNow.AddSeconds(1);
+            _nextRefreshSeconds = _clock.Seconds + 1;
         }
 
         return _snapshot;

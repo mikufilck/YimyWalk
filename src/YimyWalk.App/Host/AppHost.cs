@@ -8,18 +8,19 @@ using YimyWalk.Core.Display;
 using YimyWalk.Core.Settings;
 using YimyWalk.Core.Startup;
 using YimyWalk.Core.Simulation;
-using System.Diagnostics;
 using System.Numerics;
 
 namespace YimyWalk.App.Host;
 
 internal sealed class AppHost : ApplicationContext
 {
-    private readonly DesktopWorldSurface _surface = new();
+    private readonly DesktopWorldSurface _surface;
+    private readonly IMonotonicClock _clock;
+    private readonly IAppLog _log;
     private readonly PetWindowRegistry _windows = new();
     private readonly FrameSurfaceCache _surfaceCache = new();
     private readonly CharacterCatalog _catalog = new();
-    private readonly SettingsStore _settingsStore = new();
+    private readonly SettingsStore _settingsStore;
     private readonly SettingsSaveCoordinator _settingsSave;
     private readonly PetSession _session;
     private readonly System.Windows.Forms.Timer _timer;
@@ -28,25 +29,44 @@ internal sealed class AppHost : ApplicationContext
     private readonly TrayIconHost _tray;
     private readonly DialogueScheduler _dialogue = new();
     private readonly Dictionary<Guid, BubbleWindow> _bubbleWindows = new();
-    private readonly VirtualFoodSystem _virtualFood = new();
+    private readonly VirtualFoodSystem _virtualFood;
     private readonly Dictionary<Guid, FoodWindow> _foodWindows = new();
     private readonly HashSet<string> _registeredDefinitionIds = new(StringComparer.OrdinalIgnoreCase);
     private SettingsDocument _settings = SettingsDocument.Defaults;
     private SettingsLoadResult _settingsLoad = new(SettingsDocument.Defaults, UsedDefaults: true, UsedBackup: false, null);
     private bool _disposed;
-    private long _lastTickTimestamp;
+    private double _lastTickSeconds;
     private double _dialogueClock;
     private uint _lastForegroundProcess;
-    private DateTime _nextForegroundCheckUtc;
+    private double _nextForegroundCheckSeconds;
     internal bool IsExiting { get; private set; }
 
-    public AppHost()
+    public AppHost() : this(null) { }
+
+    public AppHost(string? settingsRoot) : this(settingsRoot, StopwatchClock.Instance, null) { }
+
+    internal AppHost(string? settingsRoot, IMonotonicClock clock, IAppLog? log)
     {
+        _clock = clock;
+        _settingsStore = new SettingsStore(settingsRoot);
+        _log = log ?? new AppLog(Path.Combine(_settingsStore.RootDirectory, "logs"), clock);
+        _surface = new DesktopWorldSurface(clock, _log);
         _session = new PetSession(_surface, new SystemRandomSource());
+        _virtualFood = _session.VirtualFood;
         _session.InstanceAdded += OnInstanceAdded;
         _session.InstanceRemoved += OnInstanceRemoved;
+        _session.InstanceFaulted += (_, error) => ReportRuntimeFailure("SIMULATION", error);
         _timer = new System.Windows.Forms.Timer { Interval = 16 };
-        _timer.Tick += (_, _) => Tick();
+        _timer.Tick += (_, _) =>
+        {
+            try { Tick(); }
+            catch (Exception error) when (error is not OutOfMemoryException)
+            {
+                _timer.Stop();
+                _session.Pause();
+                ReportRuntimeFailure("FRAME_LOOP_STOPPED", error);
+            }
+        };
         _settingsSave = new SettingsSaveCoordinator(SaveSettingsCore);
         _batch = new BatchCreationQueue(() =>
         {
@@ -56,6 +76,7 @@ internal sealed class AppHost : ApplicationContext
             return _session.Create(definition.Id);
         });
         _manager = new ManagerForm(this);
+        _batch.Failed += error => ReportRuntimeFailure("CREATION_CANCELLED", error);
         // ApplicationContext owns the message loop independently of manager visibility.
         _settingsSave.Changed += OnSettingsSaveChanged;
         _tray = new TrayIconHost(this);
@@ -76,11 +97,12 @@ internal sealed class AppHost : ApplicationContext
         get => _settings.Scale;
         set
         {
+            if (!float.IsFinite(value)) return;
             var bounded = Math.Clamp(value, SettingsDocument.MinScale, SettingsDocument.MaxScale);
             if (Math.Abs(_settings.Scale - bounded) < 0.0001f) return;
             _settings = _settings with { Scale = bounded };
             _session.GlobalScale = bounded;
-            foreach (var window in _windows.Windows) window.SetGlobalScale(bounded);
+            foreach (var window in _windows.Windows) RenderSafely(window, () => window.SetGlobalScale(bounded));
             if (!_disposed && CharacterRoot.Length > 0) SaveSettings(debounce: true);
         }
     }
@@ -90,6 +112,25 @@ internal sealed class AppHost : ApplicationContext
     public int ActivePetCount => _session.ActiveCount;
     public int PendingCreationCount => _batch.PendingCount;
     public bool IsPaused => _session.IsPaused;
+    public string? RuntimeDiagnostic { get; private set; }
+    private void ReportRuntimeFailure(string code, Exception error)
+    {
+        _log.Record(code, error);
+        RuntimeDiagnostic = code == "FRAME_LOOP_STOPPED"
+            ? "运行已暂停；可清空后继续或重新启动。诊断已写入本地日志。"
+            : "部分操作失败，已保留其他桌宠；可调整大小或重试创建。诊断已写入本地日志。";
+    }
+
+    private void RenderSafely(PetWindow window, Action render)
+    {
+        try { render(); }
+        catch (RenderBudgetExceededException error) { ReportRuntimeFailure("RENDER_BUDGET", error); }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            ReportRuntimeFailure("PET_RENDER_REMOVED", error);
+            _session.Remove(window.Instance.InstanceId);
+        }
+    }
     public IReadOnlyCollection<PetInstance> ActivePets => _session.Instances;
     // Simulation, creation, deletion and UI sampling all run serially on the WinForms thread.
     // Copy values before controls are updated; no queued or mutable snapshots reach the page.
@@ -114,6 +155,7 @@ internal sealed class AppHost : ApplicationContext
         set
         {
             var bounded = Math.Clamp(value, SettingsDocument.MinActivityRate, SettingsDocument.MaxActivityRate);
+            if (!float.IsFinite(bounded)) return;
             if (Math.Abs(_session.ActivityRate - bounded) < 0.0001f) return;
             _session.ActivityRate = bounded;
             if (!_disposed && CharacterRoot.Length > 0)
@@ -211,6 +253,8 @@ internal sealed class AppHost : ApplicationContext
     public bool WindowSurfaceSnapshotValid => _surface.WindowSurfaceSnapshotValid;
     public IReadOnlyList<WindowSurfaceCandidate> WindowSurfaceCandidates => _surface.WindowSurfaceCandidates;
     public int CachedSurfaceCount => _surfaceCache.Count;
+    public long CachedSurfaceBytes => _surfaceCache.AllocatedBytes;
+    public long SurfaceBudgetBytes => _surfaceCache.BudgetBytes;
     public int DialogueBubbleCount => _dialogue.Active.Count;
     public int VirtualFoodCount => _virtualFood.Targets.Count;
     public bool DialogueEnabled
@@ -250,10 +294,7 @@ internal sealed class AppHost : ApplicationContext
     public void Start()
     {
         _surface.ExcludeWindow = IsHostWindow;
-        if (MainForm is { } form)
-        _surface.RefreshForWindow(form.Handle);
-        else
-            _surface.RefreshNow();
+        _surface.RefreshNow();
         _surface.RefreshWindowSurfaces();
         _settingsLoad = _settingsStore.Load();
         _settings = _settingsLoad.Settings;
@@ -281,9 +322,9 @@ internal sealed class AppHost : ApplicationContext
         ApplyDefinitions(definitions);
         EnsureSelectedRole();
         _timer.Start();
-        _lastTickTimestamp = Stopwatch.GetTimestamp();
+        _lastTickSeconds = _clock.Seconds;
         _dialogueClock = 0;
-        _nextForegroundCheckUtc = DateTime.UtcNow;
+        _nextForegroundCheckSeconds = _clock.Seconds;
         _manager.RefreshCharacters();
         _manager.SetReloadStatus(definitions.Count, _catalog.LastFailures.Count);
         _manager.SetSettingsStatus(GetSettingsStatus());
@@ -348,7 +389,7 @@ internal sealed class AppHost : ApplicationContext
         if (pet is null) return false;
         pet.ScaleOverride = scale;
         if (_windows.TryGet(instanceId, out var window) && window is not null)
-            window.RefreshFrame();
+            RenderSafely(window, window.RefreshFrame);
         return true;
     }
 
@@ -372,6 +413,11 @@ internal sealed class AppHost : ApplicationContext
 
     public void SpawnVirtualFood()
     {
+        if (_virtualFood.Targets.Count >= _virtualFood.MaxTargets)
+        {
+            RuntimeDiagnostic = "虚拟食物已达上限，请等待消耗后再试。";
+            return;
+        }
         var area = _surface.SpawnArea;
         _virtualFood.Spawn(new System.Numerics.Vector2(area.Left + area.Width * 0.5f, area.Bottom));
     }
@@ -379,7 +425,9 @@ internal sealed class AppHost : ApplicationContext
     public void QueueCreate(string id, int count)
     {
         if (!_catalog.TryGet(id, out var definition)) return;
-        _batch.Enqueue(() => _session.Create(definition.Id), count);
+        try { _batch.Enqueue(() => _session.Create(definition.Id), count); }
+        catch (Exception error) when (error is InvalidOperationException or OverflowException)
+        { ReportRuntimeFailure("CREATION_REQUEST_REJECTED", error); }
     }
 
     public void SetSelectedRole(string id)
@@ -430,25 +478,19 @@ internal sealed class AppHost : ApplicationContext
 
     public void PausePets() => _session.Pause();
 
-    public void ResumePets() => _session.Resume();
+    public void ResumePets()
+    {
+        _session.Resume();
+        _lastTickSeconds = _clock.Seconds;
+        _timer.Start();
+    }
 
     private void Tick()
     {
-        var now = Stopwatch.GetTimestamp();
-        var delta = _lastTickTimestamp == 0
-            ? _timer.Interval / 1000d
-            : (now - _lastTickTimestamp) / (double)Stopwatch.Frequency;
-        _lastTickTimestamp = now;
+        var now = _clock.Seconds;
+        var delta = Math.Clamp(now - _lastTickSeconds, 0, PetEngine.MaxDeltaSeconds);
+        _lastTickSeconds = now;
         _session.Tick(Math.Clamp(delta, 0, PetEngine.MaxDeltaSeconds));
-        foreach (var target in _virtualFood.Targets.Where(target => target.State == VirtualFoodState.Available).ToArray())
-        {
-            var pet = _session.Instances
-                .Where(pet => pet.State is PetState.Idle or PetState.Walk)
-                .OrderBy(pet => Vector2.DistanceSquared(pet.FootPosition, target.Position))
-                .FirstOrDefault();
-            if (pet is not null) _virtualFood.TryClaim(pet, target.Id);
-        }
-        _virtualFood.Tick(_session.Instances, delta);
         var activeFoodIds = _virtualFood.Targets.Select(target => target.Id).ToHashSet();
         foreach (var stale in _foodWindows.Keys.Where(id => !activeFoodIds.Contains(id)).ToArray())
         {
@@ -469,9 +511,9 @@ internal sealed class AppHost : ApplicationContext
         }
         _dialogueClock += Math.Clamp(delta, 0, PetEngine.MaxDeltaSeconds);
         _dialogue.Advance(_dialogueClock);
-        if (ExternalEventsEnabled && DateTime.UtcNow >= _nextForegroundCheckUtc)
+        if (ExternalEventsEnabled && now >= _nextForegroundCheckSeconds)
         {
-            _nextForegroundCheckUtc = DateTime.UtcNow.AddMilliseconds(500);
+            _nextForegroundCheckSeconds = now + 0.5;
             PollForegroundApplication();
         }
         foreach (var expired in _bubbleWindows.Keys.Where(id => !_dialogue.Active.Any(bubble => bubble.Id == id)).ToArray())
@@ -479,7 +521,8 @@ internal sealed class AppHost : ApplicationContext
             _bubbleWindows[expired].Dispose();
             _bubbleWindows.Remove(expired);
         }
-        foreach (var window in _windows.Windows) window.RefreshFrame();
+        foreach (var window in _windows.Windows)
+            RenderSafely(window, window.RefreshFrame);
         foreach (var bubble in _dialogue.Active)
             if (_bubbleWindows.TryGetValue(bubble.Id, out var bubbleWindow)
                 && _windows.TryGet(bubble.PetId, out var petWindow) && petWindow is not null)
@@ -488,10 +531,11 @@ internal sealed class AppHost : ApplicationContext
 
     private void OnInstanceAdded(PetInstance instance)
     {
-        var window = new PetWindow(instance, _session, _surfaceCache, _settings.Scale);
+        var window = new PetWindow(instance, _session, _surfaceCache, _settings.Scale, _clock);
         window.Interaction += group => PublishDialogue(instance, group);
         _windows.Add(window);
-        PublishDialogue(instance, "created");
+        try { PublishDialogue(instance, "created"); }
+        catch { _windows.Remove(instance.InstanceId); _dialogue.RemovePet(instance.InstanceId); throw; }
     }
 
     private void OnInstanceRemoved(PetInstance instance)
@@ -540,8 +584,9 @@ internal sealed class AppHost : ApplicationContext
 
     private bool IsHostWindow(IntPtr handle)
     {
-        if (MainForm?.IsHandleCreated == true && MainForm.Handle == handle) return true;
         if (_manager.IsHandleCreated && _manager.Handle == handle) return true;
+        if (_bubbleWindows.Values.Any(window => window.IsHandleCreated && window.Handle == handle)) return true;
+        if (_foodWindows.Values.Any(window => window.IsHandleCreated && window.Handle == handle)) return true;
         return _windows.Windows.Any(window => window.IsHandleCreated && window.Handle == handle);
     }
 
@@ -588,7 +633,8 @@ internal sealed class AppHost : ApplicationContext
 
     private void SaveSettingsCore()
     {
-        _settingsStore.Save(_settings);
+        try { _settingsStore.Save(_settings); }
+        catch (Exception error) { _log.Record("SETTINGS_SAVE_FAILED", error); throw; }
         _settingsLoad = new SettingsLoadResult(_settings, UsedDefaults: false, UsedBackup: false, null);
     }
 
@@ -630,7 +676,6 @@ internal sealed class AppHost : ApplicationContext
             _surfaceCache.Dispose();
             _surface.Dispose();
             _settingsSave.Dispose();
-            MainForm?.Dispose();
         }
         base.Dispose(disposing);
     }

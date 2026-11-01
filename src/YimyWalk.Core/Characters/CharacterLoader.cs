@@ -1,8 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using YimyWalk.Core.Imaging;
 
 namespace YimyWalk.Core.Characters;
 
@@ -14,7 +13,7 @@ public static class CharacterLoader
     public const float MinScale = 0.1f;
     public const float MaxScale = 8f;
     public const int MaxRenderedFrameDimension = 1024;
-    public const float MaxWalkSpeed = 2_000f;
+    public const float MaxWalkSpeed = YimyWalk.Core.Simulation.PetLimits.MaxWalkSpeed;
     public const float MaxJumpSpeed = 5_000f;
     public const float MaxGravity = 20_000f;
     public const float MaxFallSpeed = 5_000f;
@@ -43,7 +42,7 @@ public static class CharacterLoader
             var header = ReadPngHeader(spritePath, fullDirectory);
             ValidateDimensions(header.Width, header.Height, fullDirectory);
 
-            using var image = Image.Load<Rgba32>(spritePath);
+            using var image = PngImage.Load(spritePath);
             if (image.Width != header.Width || image.Height != header.Height)
                 throw new CharacterLoadException(fullDirectory, "sprite dimensions changed while loading");
             ValidatePixels(image, fullDirectory);
@@ -73,9 +72,9 @@ public static class CharacterLoader
         {
             throw;
         }
-        catch (Exception ex) when (ex is InvalidImageContentException or UnknownImageFormatException
-            or InvalidOperationException or IOException or JsonException or ArgumentException
-            or NotSupportedException or EndOfStreamException or OverflowException)
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or InvalidDataException or JsonException or ArgumentException
+            or NotSupportedException or EndOfStreamException or OverflowException
+            or UnauthorizedAccessException or System.Security.SecurityException)
         {
             throw new CharacterLoadException(fullDirectory, ex.Message, ex);
         }
@@ -147,7 +146,7 @@ public static class CharacterLoader
             throw new CharacterLoadException(directory, $"sprite dimensions exceed {MaxDimension}px or {MaxPixels} pixels");
     }
 
-    private static void ValidatePixels(Image<Rgba32> image, string directory)
+    private static void ValidatePixels(PngImage image, string directory)
     {
         for (var y = 0; y < image.Height; y++)
         for (var x = 0; x < image.Width; x++)
@@ -156,7 +155,7 @@ public static class CharacterLoader
         throw new CharacterLoadException(directory, "sprite is fully transparent");
     }
 
-    private static IReadOnlyList<CharacterFrame> ExtractFrames(Image<Rgba32> image, int cellWidth, int cellHeight)
+    private static IReadOnlyList<CharacterFrame> ExtractFrames(PngImage image, int cellWidth, int cellHeight)
     {
         var frames = new List<CharacterFrame>(9);
         for (var index = 0; index < 9; index++)

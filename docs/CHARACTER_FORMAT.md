@@ -71,13 +71,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-character.p
 
 成功返回 0，并报告尺寸、单格尺寸、Alpha、九帧映射、配置来源、对白来源、缩放和锚点。角色无效返回 1 并保留上一条可读错误；参数或工具使用错误返回 2。输入目录可以包含空格和中文。预览是由九个已解码帧重新组合的 PNG，参考图只包含 3×3 网格和默认锚点示意；两者都不写回 `sprite.png`。校验失败时不会创建或替换预览输出，若目标已有文件则保持原样并打印提示。
 
-仓库中的 `Characters/slime`、`Characters/咿米_Yimy` 和 `Characters/咿米_Line` 是随发布包提供的 sprite-only 初始角色。后两者分别来自用户提供的 `Yimy.jpg` 和 `Yimy_no.jpg`，文件实际为透明 PNG，原样保存为 `sprite.png`，整图 1254×1254、单格 418×418。`cat` 仅保留在 `tests/Fixtures/Characters/cat` 供测试使用。`examples/character-template` 提供带配置和对白的作者模板；`docs/assets/character-grid-reference.png` 是不应放进运行时 sprite 的参考图。
+仓库中的 `Characters/slime`、`Characters/咿米_Yimy` 和 `Characters/咿米_Line` 是随发布包提供的 sprite-only 初始角色。三者当前文件均为整图 1254×1254、单格 418×418（2026-11-01 复核）。后两者分别来自用户提供的 `Yimy.jpg` 和 `Yimy_no.jpg`，文件实际为透明 PNG，原样保存为 `sprite.png`。`tools/GenerateTestCharacters.ps1` 生成的小尺寸测试图不能当作当前随包素材的来源或尺寸。`cat` 仅保留在 `tests/Fixtures/Characters/cat` 供测试使用。`examples/character-template` 提供带配置和对白的作者模板；`docs/assets/character-grid-reference.png` 是不应放进运行时 sprite 的参考图。
 
-预览示例：
+历史测试素材的预览示意（不代表当前随包 PNG 的内容或尺寸）：
 
 ![cat 3×3 preview](assets/cat-preview.png)
 ![slime 3×3 preview](assets/slime-preview.png)
 
+## 最终呈现预算
+
+角色倍率、全局 / 实例倍率与 DPI 合成后的呈现，单帧单边最多 1024 像素、总像素最多 1,048,576；超出时统一限制有效缩放，不修改原图与配置。渲染缓存预算为 64 MiB，紧张时保留上一帧并提供诊断。PNG-only 读取现在使用 StbImageNext，并检查 chunk CRC 与解压预算；有效 3×3 协议、锚点与配置字段不变。
+
 ## 当前边界
 
-本阶段支持 3×3 基础动作、可选配置和对白，以及工具生成的静态预览。`actions.png`、额外动作映射、逐角色用户覆盖层、脚本和远程资源尚未实现；把它们放进目录不会启用这些功能。完整角色刷新界面属于后续阶段，但刷新失败保留旧定义、旧绘制资源在无实例和无在途引用后释放的生命周期约束已经由宿主负责。
+本阶段支持 3×3 基础动作、可选配置和对白，以及工具生成的静态预览。`actions.png`、额外动作映射、逐角色用户覆盖层、脚本和远程资源尚未实现；把它们放进目录不会启用这些功能。管理器的“角色”页已提供刷新入口；失败保留旧定义、旧绘制资源在无实例和无在途引用后释放的生命周期约束由宿主负责。当前资源与异常路径的待办见 [项目审查](reviews/2026-11-01-project-review.md)。

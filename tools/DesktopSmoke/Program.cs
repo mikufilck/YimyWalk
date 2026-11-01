@@ -4,6 +4,11 @@ using System.Numerics;
 using System.Windows.Forms;
 using YimyWalk.Core.Simulation;
 
+internal static class Program
+{
+[STAThread]
+private static void Main(string[] args)
+{
 var rounds = args.Length == 0 ? 1 : int.TryParse(args[0], out var parsed) && parsed > 0 && parsed <= 20 ? parsed : throw new ArgumentException("Rounds must be between 1 and 20.");
 var role = args.Length < 2 ? "slime" : args[1];
 var landingRequested = args.Any(arg => arg.Equals("landing", StringComparison.OrdinalIgnoreCase));
@@ -17,6 +22,7 @@ var appAssemblyCandidates = new[]
 var appAssemblyPath = appAssemblyCandidates.FirstOrDefault(File.Exists)
     ?? throw new FileNotFoundException("YimyWalk.App development assembly was not found.");
 var app = Assembly.LoadFrom(appAssemblyPath);
+app.GetType("YimyWalk.App.Program", true)!.GetMethod("InitializeDesktop", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null);
 var settingsRoot = Path.Combine(Path.GetTempPath(), "YimyWalkSettingsSmoke", Guid.NewGuid().ToString("N"));
 var settingsType = app.GetType("YimyWalk.App.Settings.SettingsStore", true)!;
 var settingsStore = Activator.CreateInstance(settingsType, new object[] { settingsRoot })!;
@@ -41,8 +47,11 @@ if (!(bool)recoveredLoad.GetType().GetProperty("UsedBackup")!.GetValue(recovered
 Console.WriteLine("SETTINGS STORE DEFAULT_SAVE_BACKUP=PASS");
 Directory.Delete(settingsRoot, recursive: true);
 var type = app.GetType("YimyWalk.App.Host.AppHost", true)!;
-var host = Activator.CreateInstance(type, nonPublic: true)!;
+var hostSettingsRoot = Path.Combine(Path.GetTempPath(), "YimyWalkSmokeSettings-" + Guid.NewGuid().ToString("N"));
+var host = Activator.CreateInstance(type, new object[] { hostSettingsRoot })!;
 var characterTemp = Path.Combine(Path.GetTempPath(), "YimyWalkDesktopSmoke-" + Guid.NewGuid().ToString("N"));
+try
+{
 Directory.CreateDirectory(characterTemp);
 CopyCharacterFixture("slime", characterTemp);
 CopyCharacterFixture("cat", characterTemp);
@@ -201,7 +210,8 @@ if (landingRequested)
         ShowInTaskbar = false,
         Bounds = new Rectangle(1370, 300, 120, 240),
         BackColor = Color.CornflowerBlue,
-        Text = "YimyWalk landing probe"
+        Text = "YimyWalk landing probe",
+        TopMost = true
     };
     landingProbe.Show();
     Application.DoEvents();
@@ -290,7 +300,9 @@ foreach (var n in new[] { 1, 10, 50, 100 })
     using (var process = System.Diagnostics.Process.GetCurrentProcess())
     {
         process.Refresh();
-        Console.WriteLine($"ROUND {round} CREATE {n} ACTIVE={active.GetValue(session)} WINDOWS={windowCount.GetValue(windows)} {Metrics(process)}");
+        var bytes = (long)Property(host, "CachedSurfaceBytes");
+        if (bytes > (long)Property(host, "SurfaceBudgetBytes")) throw new InvalidOperationException("cache byte budget exceeded");
+        Console.WriteLine($"ROUND {round} CREATE {n} ACTIVE={active.GetValue(session)} WINDOWS={windowCount.GetValue(windows)} CACHE_BYTES={bytes} {Metrics(process)}");
     }
     type.GetMethod("ClearPets")!.Invoke(host, Array.Empty<object>());
     for (var i = 0; i < 5; i++) { Application.DoEvents(); Thread.Sleep(15); }
@@ -299,6 +311,7 @@ foreach (var n in new[] { 1, 10, 50, 100 })
     GC.Collect();
     if ((int)cachedSurfaceCount.GetValue(host)! != 0)
         throw new InvalidOperationException("clear did not release cached rendering surfaces");
+    if ((long)Property(host, "CachedSurfaceBytes") != 0) throw new InvalidOperationException("clear retained pinned surface bytes");
     using (var process = System.Diagnostics.Process.GetCurrentProcess())
     {
         process.Refresh();
@@ -315,7 +328,16 @@ if (host is IDisposable disposableHost)
     process.Refresh();
     Console.WriteLine($"FINAL {Metrics(process)}");
 }
-if (Directory.Exists(characterTemp)) Directory.Delete(characterTemp, true);
+ }
+finally
+{
+    try { ((IDisposable)host).Dispose(); }
+    finally
+    {
+        if (Directory.Exists(characterTemp)) Directory.Delete(characterTemp, true);
+        if (Directory.Exists(hostSettingsRoot)) Directory.Delete(hostSettingsRoot, true);
+    }
+}
 
 static string Metrics(System.Diagnostics.Process process)
     => $"CPU_S={process.TotalProcessorTime.TotalSeconds:0.000} WS={process.WorkingSet64} PRIVATE={process.PrivateMemorySize64} MANAGED={GC.GetTotalMemory(false)} HANDLES={process.HandleCount} USER={Native.GetGuiResources(process.Handle, 1)} GDI={Native.GetGuiResources(process.Handle, 0)}";
@@ -350,6 +372,9 @@ static bool SameIcon(Icon expected, Icon actual)
         for (var x = 0; x < expectedBitmap.Width; x++)
             if (expectedBitmap.GetPixel(x, y).ToArgb() != actualBitmap.GetPixel(x, y).ToArgb()) return false;
     return true;
+}
+
+}
 }
 
 static class Native

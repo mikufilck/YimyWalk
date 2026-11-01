@@ -1,5 +1,4 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using YimyWalk.Core.Imaging;
 using YimyWalk.Core.Characters;
 
 namespace YimyWalk.CharacterTools;
@@ -23,7 +22,7 @@ public static class CharacterPreviewWriter
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
         var fullPath = Path.GetFullPath(outputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        using var image = new Image<Rgba32>(definition.CellWidth * 3, definition.CellHeight * 3, new Rgba32(0, 0, 0, 0));
+        using var image = new PngImage(definition.CellWidth * 3, definition.CellHeight * 3, new Rgba32(0, 0, 0, 0));
         foreach (var frame in definition.Frames)
         {
             var cellX = frame.Index % 3 * definition.CellWidth;
@@ -45,7 +44,7 @@ public static class CharacterPreviewWriter
         var fullPath = Path.GetFullPath(outputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         const int cell = 64;
-        using var image = new Image<Rgba32>(cell * 3, cell * 3, new Rgba32(0, 0, 0, 0));
+        using var image = new PngImage(cell * 3, cell * 3, new Rgba32(0, 0, 0, 0));
         var grid = new Rgba32(110, 110, 110, 255);
         var anchor = new Rgba32(210, 70, 70, 255);
         for (var i = 0; i < 3 * cell; i++)

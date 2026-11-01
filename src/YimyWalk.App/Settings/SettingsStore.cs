@@ -13,9 +13,14 @@ internal sealed class SettingsStore
     private const string SettingsFileName = "settings.json";
     private const string BackupFileName = "settings.json.bak";
     private const string TemporaryFileName = "settings.json.tmp";
+    private readonly Action<string, string, string?> _replace;
 
     public SettingsStore(string? rootDirectory = null)
+        : this(rootDirectory, (source, destination, backup) => File.Replace(source, destination, backup, ignoreMetadataErrors: true)) { }
+
+    internal SettingsStore(string? rootDirectory, Action<string, string, string?> replace)
     {
+        _replace = replace;
         RootDirectory = Path.GetFullPath(rootDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             ApplicationDirectoryName));
@@ -72,19 +77,22 @@ internal sealed class SettingsStore
 
             if (File.Exists(SettingsPath))
             {
+                // A corrupt primary is not a recovery point. Preserve an
+                // existing good backup after Load has recovered from it.
+                var rotateBackup = TryRead(SettingsPath, out _, out _);
                 try
                 {
                     // File.Replace atomically swaps the destination and keeps
                     // the previous valid document as the recovery copy.
-                    File.Replace(TemporaryPath, SettingsPath, BackupPath, ignoreMetadataErrors: true);
+                    _replace(TemporaryPath, SettingsPath, rotateBackup ? BackupPath : null);
                 }
                 catch (PlatformNotSupportedException)
                 {
-                    ReplaceWithCopyFallback();
+                    ReplaceWithCopyFallback(rotateBackup);
                 }
                 catch (IOException)
                 {
-                    ReplaceWithCopyFallback();
+                    ReplaceWithCopyFallback(rotateBackup);
                 }
             }
             else
@@ -98,9 +106,9 @@ internal sealed class SettingsStore
         }
     }
 
-    private void ReplaceWithCopyFallback()
+    private void ReplaceWithCopyFallback(bool rotateBackup)
     {
-        File.Copy(SettingsPath, BackupPath, overwrite: true);
+        if (rotateBackup) File.Copy(SettingsPath, BackupPath, overwrite: true);
         File.Move(TemporaryPath, SettingsPath, overwrite: true);
     }
 

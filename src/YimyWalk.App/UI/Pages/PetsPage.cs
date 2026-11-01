@@ -187,6 +187,20 @@ internal sealed class PetsPage : ManagerPage
         panel.Controls.Add(_runtime);
         panel.Controls.Add(_detailMeta);
         panel.Controls.Add(_detailTitle);
+        panel.SizeChanged += (_, _) =>
+        {
+            var width = Math.Max(1, panel.ClientSize.Width - panel.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth);
+            foreach (var label in new[] { _detailTitle, _detailMeta, _runtime, _saveNote, _operation })
+                label.MaximumSize = new Size(width, 0);
+        };
+        settings.SizeChanged += (_, _) =>
+        {
+            foreach (var label in settings.Controls.OfType<Label>())
+            {
+                var fraction = settings.GetColumn(label) == 0 ? .45 : .55;
+                label.MaximumSize = new Size(Math.Max(1, (int)(settings.ClientSize.Width * fraction) - label.Margin.Horizontal), 0);
+            }
+        };
         return panel;
     }
 
