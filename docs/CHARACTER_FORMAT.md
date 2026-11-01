@@ -98,7 +98,7 @@ Characters/<id>/
 - `behavior.walkSecondsMin` / `walkSecondsMax`：一次自主行走的持续时间在区间内随机，到时自动回到发呆；缺省 **3–10 秒**。跟随虚拟食物时不受该时长限制。
 - `walkSecondsMax` 不能小于 `walkSecondsMin`，两者都会除以全局/实例活跃度倍率。
 
-随包的两个咿米角色使用 `idleFrames: [0]`、`walkFrames: [3,4,5,4]`、`walkStridePixels: 100`、`sampling: smooth` 与 `anchor.y: 1.0`（脚底贴单元格下沿）；`sprite.png` 原始字节未改。只有 `sprite.png` 的角色仍然完全兼容，行为与 0.1.x 一致。
+随包的两个咿米角色使用 `idleFps: 1`、`idleFrames: [0,1,2]`（每秒换一个待机姿势）、`walkFrames: [3,4,5,4]`、`walkStridePixels: 100`、`sampling: smooth` 与 `anchor.y: 1.0`（脚底贴单元格下沿）；`sprite.png` 原始字节未改。只有 `sprite.png` 的角色仍然完全兼容，行为与 0.1.x 一致。
 
 `dialogue.txt` 使用 UTF-8。空行以及以 `#` 或 `;` 开头的行会忽略；用 `[idle]`、`[walk]`、`[jump]` 等标题切换分组。缺少分组会回退内置台词。每个角色最多 1000 行，每行最多 500 个字符，文件最多 256 KiB。
 

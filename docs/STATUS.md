@@ -1,3 +1,20 @@
+# 2026-11-02 默认体验调整：待机循环、窗口落脚默认开启、默认角色与启动生成
+
+**变更**：
+
+- 两个随包咿米角色改为 `idleFps: 1` + `idleFrames: [0,1,2]`，停止时每秒切换一个待机姿势；其他角色保持自己的配置。
+- `SettingsDocument.WindowLandingEnabled` 默认值改为 **true**。
+- `SettingsDocument.SelectedRoleId` 默认值改为 **`咿米_Yimy`**；`EnsureSelectedRole` 的回退顺序改为 咿米 → slime → 首个可用角色。
+- 生产入口 `new AppHost()` 在启动后**自动创建一只默认角色宠物**；`new AppHost(settingsRoot)`（测试/tool 隔离目录）不自动生成，避免影响 smoke 的实例计数。
+
+**验证**：
+
+- ② 构建通过：`dotnet build YimyWalk.sln -c Release` → **0 警告 / 0 错误**。
+- ③ 测试通过：Core **187/187**、App **24/24**。
+- ④ Windows 桌面：本轮**未人工验收**新默认观感（待机每秒切换、启动自动生成、默认落脚开启）；需启动 0.3.2 后观察。
+
+**注意**：`windowLandingEnabled` 与 `selectedRoleId` 是**已持久化设置**。已有用户的 `%LocalAppData%/YimyWalk/settings.json` 里的旧值仍然优先；本次已把本机设置同步为 `true` / `咿米_Yimy`。
+
 # 2026-11-02 文档清理：移除已完成的历史计划与旧评审
 
 **删除**（均可从 git 历史取回）：

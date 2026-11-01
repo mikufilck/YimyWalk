@@ -32,6 +32,7 @@ internal sealed class AppHost : ApplicationContext
     private readonly VirtualFoodSystem _virtualFood;
     private readonly Dictionary<Guid, FoodWindow> _foodWindows = new();
     private readonly HashSet<string> _registeredDefinitionIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly bool _spawnDefaultPetOnStart;
     private SettingsDocument _settings = SettingsDocument.Defaults;
     private SettingsLoadResult _settingsLoad = new(SettingsDocument.Defaults, UsedDefaults: true, UsedBackup: false, null);
     private bool _disposed;
@@ -41,12 +42,13 @@ internal sealed class AppHost : ApplicationContext
     private double _nextForegroundCheckSeconds;
     internal bool IsExiting { get; private set; }
 
-    public AppHost() : this(null) { }
+    public AppHost() : this(null, StopwatchClock.Instance, null, spawnDefaultPetOnStart: true) { }
 
-    public AppHost(string? settingsRoot) : this(settingsRoot, StopwatchClock.Instance, null) { }
+    public AppHost(string? settingsRoot) : this(settingsRoot, StopwatchClock.Instance, null, spawnDefaultPetOnStart: false) { }
 
-    internal AppHost(string? settingsRoot, IMonotonicClock clock, IAppLog? log)
+    internal AppHost(string? settingsRoot, IMonotonicClock clock, IAppLog? log, bool spawnDefaultPetOnStart = false)
     {
+        _spawnDefaultPetOnStart = spawnDefaultPetOnStart;
         _clock = clock;
         _settingsStore = new SettingsStore(settingsRoot);
         _log = log ?? new AppLog(Path.Combine(_settingsStore.RootDirectory, "logs"), clock);
@@ -321,6 +323,7 @@ internal sealed class AppHost : ApplicationContext
             throw new StartupFailureException(startupDiagnostic);
         ApplyDefinitions(definitions);
         EnsureSelectedRole();
+        SpawnStartupPet();
         _timer.Start();
         _lastTickSeconds = _clock.Seconds;
         _dialogueClock = 0;
@@ -607,12 +610,31 @@ internal sealed class AppHost : ApplicationContext
     {
         if (_catalog.TryGet(_settings.SelectedRoleId, out _)) return;
         var fallback = _catalog.Definitions.Values
-            .OrderByDescending(definition => definition.Id.Equals("slime", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(definition => definition.Id.Equals(SettingsDocument.DefaultRoleId, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(definition => definition.Id.Equals("slime", StringComparison.OrdinalIgnoreCase))
             .ThenBy(definition => definition.Id)
             .FirstOrDefault();
         if (fallback is null) return;
         _settings = _settings with { SelectedRoleId = fallback.Id };
         SaveSettings();
+    }
+
+    /// <summary>
+    /// Production startup creates one pet of the selected role. Tools and tests
+    /// pass an isolated settings root and opt out so their instance counts stay exact.
+    /// </summary>
+    private void SpawnStartupPet()
+    {
+        if (!_spawnDefaultPetOnStart) return;
+        if (!_catalog.TryGet(_settings.SelectedRoleId, out _)) return;
+        try
+        {
+            _session.Create(_settings.SelectedRoleId);
+        }
+        catch (Exception error) when (error is InvalidOperationException or KeyNotFoundException)
+        {
+            ReportRuntimeFailure("STARTUP_PET_FAILED", error);
+        }
     }
 
     private string GetSettingsStatus()

@@ -11,7 +11,7 @@ public sealed class SettingsDocumentTests
         var settings = SettingsDocument.Defaults;
 
         Assert.Equal(1, settings.SchemaVersion);
-        Assert.Equal("slime", settings.SelectedRoleId);
+        Assert.Equal("咿米_Yimy", settings.SelectedRoleId);
         Assert.Equal(1f, settings.Scale);
         Assert.Equal(1f, settings.ActivityRate);
         Assert.True(settings.DefaultWalkEnabled);
@@ -23,7 +23,7 @@ public sealed class SettingsDocumentTests
         Assert.Equal(0.12f, settings.ClimbDesire);
         Assert.Equal(0.2f, settings.WindowJumpDesire);
         Assert.False(settings.ExternalEventsEnabled);
-        Assert.False(settings.WindowLandingEnabled);
+        Assert.True(settings.WindowLandingEnabled);
         Assert.Null(settings.PreferredDisplayId);
         Assert.Null(settings.WarningLimit);
         Assert.True(settings.TryValidate(out var error), error);

@@ -14,14 +14,14 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 
 | 主题 | 当前实现与定位 |
 | --- | --- |
-| 启动 / 关闭 | 启动隐藏管理器、不自动创建宠物；托盘打开管理器，普通关闭隐藏回托盘，显式退出才结束宿主 |
+| 启动 / 关闭 | 启动隐藏管理器并**自动创建一只默认角色（`咿米_Yimy`）**；托盘打开管理器，普通关闭隐藏回托盘，显式退出才结束宿主。首次启动默认角色为 `咿米_Yimy`，缺失时回退 `slime` / 首个可用角色 |
 | 时间与诊断 | `RuntimeServices` 提供注入的单调时钟；物理 / 拖拽 / 轮询均使用它。日志仅写稳定操作码和异常类型，每份约 1 MiB、一份轮换、同类限频；帧循环故障暂停，单宠绘制故障与批量失败分别隔离 |
 | 资源所有权 | 定义通过 DefinitionLease 共享；渲染窗口与预览必须持有 SurfaceLease，先释放 handle 再释放定义使用权。禁止拿到裸 surface 后丢弃 handle |
 | 像素与缓存 | 最终缩放统一走 `PetLimits.EffectiveScale`，单边 ≤1024、总像素 ≤1,048,576；缓存像素 + alpha 预算 64 MiB。预算紧张保留上一帧并显示诊断，不代表整个进程内存上限 |
 | 食物运动 | `PetSession.VirtualFood` 与物理同一个 Tick 推进；暂停时不推进。VirtualFoodSystem 只提供目标与消费，不写位置；PetEngine 遵守实例走动设置并按角色速度接近，不能直接在宿主另跑食物 Tick |
 | 行为 | 行走上限统一 2000 px/s；发呆等待在 `idleSecondsMin`–`idleSecondsMax` 随机一次，自主行走受 `walkSecondsMin`–`walkSecondsMax` 限制（默认 3–10 秒）且到时回到发呆；跟随食物不受行走时长限制。全局缩放与实例覆盖的合成结果仍包含角色倍率和 DPI，超过最终像素预算会限制呈现大小 |
 | 动画播放 | `character.json` 的 `animation.idleFrames` / `walkFrames` 覆盖默认序列；有 `walkStridePixels` 时按实际位移推进，否则按时间；`rendering.sampling` 控制最近邻 / 双三次。状态切换重置相位，Apex 至少 0.08 s |
-| 设置 | `%LocalAppData%/YimyWalk/settings.json` + `.bak` / `.tmp`；只用合法主文件轮换备份。全局设置与气泡总闸持久化，实例覆盖 / 位置 / 数量不持久化 |
+| 设置 | `%LocalAppData%/YimyWalk/settings.json` + `.bak` / `.tmp`；只用合法主文件轮换备份。窗口落脚默认开启；全局设置与气泡总闸持久化，实例覆盖 / 位置 / 数量不持久化 |
 | 外部与图标边界 | 外部反馈默认关闭，读取前台进程 ID，沿用 program_opened 台词组，实际语义是前台切换。食物是程序圆点，不读取 / 移动真实图标。气泡 / 食物整窗输入透明，也从宿主落脚与遮挡集合排除 |
 | 气泡外观 | App 的 BubbleRenderer 对嵌入 PNG 做九宫格缩放，台词独立按 DPI 渲染；BubbleWindow 拥有并释放位图，移动复用，按所在屏工作区定位。统一默认皮肤，未增加角色主题字段；原角色图与正式台词未改 |
 | PNG 与角色 | Core 的 PngImage 只开放受限 PNG，采用 StbImageNext 1.0.0；ImageSharp 已从依赖图移除。三套随包角色仍为 1254×1254 / 单格 418×418，素材未改；cat 只作测试 fixture |

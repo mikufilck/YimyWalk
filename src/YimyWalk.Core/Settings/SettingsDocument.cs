@@ -16,9 +16,10 @@ public sealed record SettingsDocument
     public const float DefaultClimbDesire = 0.12f;
     public const float DefaultWindowJumpDesire = 0.2f;
     public const int MaxWarningLimit = 10_000;
+    public const string DefaultRoleId = "咿米_Yimy";
 
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
-    public string SelectedRoleId { get; init; } = "slime";
+    public string SelectedRoleId { get; init; } = DefaultRoleId;
     public float Scale { get; init; } = 1f;
     public float ActivityRate { get; init; } = 1f;
     public bool DefaultWalkEnabled { get; init; } = true;
@@ -30,7 +31,7 @@ public sealed record SettingsDocument
     public float ClimbDesire { get; init; } = DefaultClimbDesire;
     public float WindowJumpDesire { get; init; } = DefaultWindowJumpDesire;
     public bool ExternalEventsEnabled { get; init; }
-    public bool WindowLandingEnabled { get; init; }
+    public bool WindowLandingEnabled { get; init; } = true;
     public string? PreferredDisplayId { get; init; }
     public int? WarningLimit { get; init; }
 

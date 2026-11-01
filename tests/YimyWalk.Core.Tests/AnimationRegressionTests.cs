@@ -147,7 +147,8 @@ public sealed class AnimationRegressionTests
         using var definition = CharacterLoader.LoadDirectory(directory);
         Assert.Equal(9, definition.Frames.Count);
         Assert.Equal(new Anchor(209, 418), definition.Anchor);
-        Assert.Equal(new[] { 0 }, definition.Animation.IdleFrames);
+        Assert.Equal(new[] { 0, 1, 2 }, definition.Animation.IdleFrames);
+        Assert.Equal(1f, definition.Animation.IdleFps);
         Assert.Equal(new[] { 3, 4, 5, 4 }, definition.Animation.WalkFrames);
         Assert.Equal(SpriteSampling.Smooth, definition.Sampling);
     }
