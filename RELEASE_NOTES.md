@@ -1,6 +1,10 @@
 # Unreleased
 
-（暂无）
+## 行为默认区间
+
+- **待机更长**：`behavior.idleSecondsMin` / `idleSecondsMax` 的缺省值从 2–8 秒改为 **5–35 秒**，停下后不会频繁起步。
+- **行走更长**：`behavior.walkSecondsMin` / `walkSecondsMax` 的缺省值从 3–10 秒改为 **3–20 秒**。
+- 两个区间仍可被角色 `character.json` 的显式值覆盖；随包角色未写 `behavior`，直接使用新默认值。
 
 # YimyWalk v0.3.1
 

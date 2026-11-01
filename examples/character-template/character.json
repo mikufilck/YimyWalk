@@ -11,10 +11,10 @@
     "maxFallSpeed": 1500
   },
   "behavior": {
-    "idleSecondsMin": 2,
-    "idleSecondsMax": 8,
+    "idleSecondsMin": 5,
+    "idleSecondsMax": 35,
     "walkSecondsMin": 3,
-    "walkSecondsMax": 10,
+    "walkSecondsMax": 20,
     "hungerIncreasePerMinute": 0.01,
     "speechCooldownSeconds": 45
   },

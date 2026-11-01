@@ -342,3 +342,11 @@ CI 只覆盖 Ubuntu 上的 restore/build/test；App 的 `EnableWindowsTargeting`
 - **虚拟食物**：`Available` 8 秒过期，`Claimed` 延长到 60 秒，认领/释放时重置计时。
 - **测试**：Core 新增 `BehaviorPacingTests`；当前 **Core 187 + App 24** 全部通过。
 - **真机**：`desktop-smoke -Landing -Rounds 1 -Role slime` 通过（`WINDOW LANDING TOP=300 PET=300 PASS`）。
+
+---
+
+## 15. 2026-11-02 增量（未发布）
+
+- **行为默认值**：`idleSecondsMin` / `idleSecondsMax` 缺省改为 **5–35 秒**，`walkSecondsMin` / `walkSecondsMax` 缺省改为 **3–20 秒**（`CharacterLoader.ReadConfig` 的兜底 `CharacterDefaults` + `CharacterDefaults.WalkSecondsMax`）；`character.json` 显式值仍优先。
+- **测试**：`CharacterLoaderTests` 增加四个默认区间断言；`MaintenanceRegressionTests` 的无聊待机测试改用显式配置，不再依赖随包默认区间。当前 Core **187** + App **24** 通过。
+- **发布状态**：只推送源码与文档，未重建发布包，`Directory.Build.props` 仍为 0.3.1。

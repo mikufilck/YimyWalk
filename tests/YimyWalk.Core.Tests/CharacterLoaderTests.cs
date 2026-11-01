@@ -15,6 +15,10 @@ public sealed class CharacterLoaderTests
         Assert.Equal(32, definition.CellHeight);
         Assert.Equal(1f, definition.Scale);
         Assert.Equal(60f, definition.Movement.WalkSpeed);
+        Assert.Equal(5f, definition.Defaults.IdleSecondsMin);
+        Assert.Equal(35f, definition.Defaults.IdleSecondsMax);
+        Assert.Equal(3f, definition.Defaults.WalkSecondsMin);
+        Assert.Equal(20f, definition.Defaults.WalkSecondsMax);
         Assert.NotEmpty(definition.Dialogue.Get("idle"));
     }
 

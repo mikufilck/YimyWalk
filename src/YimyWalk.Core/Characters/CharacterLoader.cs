@@ -195,7 +195,7 @@ public static class CharacterLoader
             1f,
             new Anchor(cellWidth * 0.5f, cellHeight * 0.9f),
             new CharacterMovement(60f, 450f, 1500f, 1500f),
-            new CharacterDefaults(2f, 8f, 45f, 0.01f, 3f, 10f),
+            new CharacterDefaults(5f, 35f, 45f, 0.01f, 3f, 20f),
             new CharacterAnimation(3f, 8f), SpriteSampling.Nearest);
 
         var path = Path.Combine(directory, "character.json");

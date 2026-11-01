@@ -1,3 +1,21 @@
+# 2026-11-02 行为默认区间调整：待机 5–35 秒、行走 3–20 秒
+
+**变更**：
+
+- `CharacterLoader.ReadConfig` 的兜底 `CharacterDefaults` 从 `(2, 8, 45, 0.01, 3, 10)` 改为 `(5, 35, 45, 0.01, 3, 20)`；没有 `behavior` 段的角色（含两个随包咿米角色，slime 无 `character.json`）直接使用新默认值。
+- `CharacterFormat.CharacterDefaults` 的 `WalkSecondsMax` 默认值 `10f` → `20f`。
+- 角色格式契约、字段名与校验边界未变，`character.json` 里的显式值仍然优先。
+- `CharacterLoaderTests.SpriteOnlyDirectoryUsesSafeDefaults` 增加四项默认区间断言，防止默认值静默漂移。
+- `MaintenanceRegressionTests.BoredomShortensIdleWaitWithoutBypassingWalkDisable` 改为使用显式 `character.json`（待机 6 秒、行走 10 秒），不再依赖随包默认区间；无聊（boredom=1）仍在 3 秒后起步，未无聊的保持 6 秒。
+
+**验证**：
+
+- ② 构建通过：`dotnet build YimyWalk.sln -c Release` → **0 警告 / 0 错误**。
+- ③ 测试通过：Core **187/187**、App **24/24**。
+- ④ Windows 桌面：本轮**未在真机观察**新节奏的实际观感（待机 5–35 秒、行走 3–20 秒）；按用户要求**未重建发布包**。
+
+**发布边界**：只推送源码与文档，`Directory.Build.props` 仍为 0.3.1，未创建新 tag / Release；这些默认值要等下一次打包才会进入发布二进制。
+
 # 2026-11-02 界面文案整理（0.3.1）
 
 **变更**：

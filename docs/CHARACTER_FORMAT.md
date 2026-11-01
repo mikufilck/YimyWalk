@@ -53,10 +53,10 @@ Characters/<id>/
     "maxFallSpeed": 1500
   },
   "behavior": {
-    "idleSecondsMin": 2,
-    "idleSecondsMax": 8,
+    "idleSecondsMin": 5,
+    "idleSecondsMax": 35,
     "walkSecondsMin": 3,
-    "walkSecondsMax": 10,
+    "walkSecondsMax": 20,
     "hungerIncreasePerMinute": 0.01,
     "speechCooldownSeconds": 45
   },
@@ -94,8 +94,8 @@ Characters/<id>/
 
 ### 行走与待机节奏
 
-- `behavior.idleSecondsMin` / `idleSecondsMax`：发呆等待时长在区间内**随机取一次**，而不是每帧重掷；缺省 2–8 秒。
-- `behavior.walkSecondsMin` / `walkSecondsMax`：一次自主行走的持续时间在区间内随机，到时自动回到发呆；缺省 **3–10 秒**。跟随虚拟食物时不受该时长限制。
+- `behavior.idleSecondsMin` / `idleSecondsMax`：发呆等待时长在区间内**随机取一次**，而不是每帧重掷；缺省 **5–35 秒**。
+- `behavior.walkSecondsMin` / `walkSecondsMax`：一次自主行走的持续时间在区间内随机，到时自动回到发呆；缺省 **3–20 秒**。跟随虚拟食物时不受该时长限制。
 - `walkSecondsMax` 不能小于 `walkSecondsMin`，两者都会除以全局/实例活跃度倍率。
 
 随包的两个咿米角色使用 `idleFps: 1`、`idleFrames: [0,1,2]`（每秒换一个待机姿势）、`walkFrames: [3,4,5,4]`、`walkStridePixels: 100`、`sampling: smooth` 与 `anchor.y: 1.0`（脚底贴单元格下沿）；`sprite.png` 原始字节未改。只有 `sprite.png` 的角色仍然完全兼容，行为与 0.1.x 一致。

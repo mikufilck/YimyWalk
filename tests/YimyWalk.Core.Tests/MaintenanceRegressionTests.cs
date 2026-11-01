@@ -8,18 +8,27 @@ public sealed class MaintenanceRegressionTests
     [Fact]
     public void BoredomShortensIdleWaitWithoutBypassingWalkDisable()
     {
-        using var definition = TestSpriteFactory.LoadSpriteOnly("boredom");
-        var bored = new PetInstance(definition, new System.Numerics.Vector2(100, 720));
-        var rested = new PetInstance(definition, bored.FootPosition);
-        var engine = new PetEngine(new TestSurface(), new FixedRandom());
-        engine.Tick(bored, .1); engine.Tick(rested, .1);
-        for (var i = 0; i < 10000; i++) bored.AdvanceNeeds(.1f, false, 1);
-        for (var i = 0; i < 45; i++) { engine.Tick(bored, .1); engine.Tick(rested, .1); }
-        Assert.Equal(PetState.Walk, bored.State);
-        Assert.Equal(PetState.Idle, rested.State);
-        engine.DefaultWalkEnabled = false;
-        engine.Tick(bored, .1);
-        Assert.Equal(PetState.Idle, bored.State);
+        var directory = TestSpriteFactory.WriteSprite(96, 96, fullyTransparent: false);
+        try
+        {
+            File.WriteAllText(Path.Combine(directory, "character.json"),
+                "{\"behavior\":{\"idleSecondsMin\":6,\"idleSecondsMax\":6,\"walkSecondsMin\":10,\"walkSecondsMax\":10}}");
+            using var definition = CharacterLoader.LoadDirectory(directory);
+            var bored = new PetInstance(definition, new System.Numerics.Vector2(100, 720));
+            var rested = new PetInstance(definition, bored.FootPosition);
+            var engine = new PetEngine(new TestSurface(), new FixedRandom());
+            // Raise boredom before the idle wait is sampled: a bored pet waits half as long.
+            for (var i = 0; i < 10000; i++) bored.AdvanceNeeds(.1f, false, 1);
+            engine.Tick(bored, .1); engine.Tick(rested, .1);
+            engine.Tick(bored, .1); engine.Tick(rested, .1);
+            for (var i = 0; i < 40; i++) { engine.Tick(bored, .1); engine.Tick(rested, .1); }
+            Assert.Equal(PetState.Walk, bored.State);
+            Assert.Equal(PetState.Idle, rested.State);
+            engine.DefaultWalkEnabled = false;
+            engine.Tick(bored, .1);
+            Assert.Equal(PetState.Idle, bored.State);
+        }
+        finally { TestSpriteFactory.DeleteFixture(directory); }
     }
 
     [Theory]
