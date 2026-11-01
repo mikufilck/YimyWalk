@@ -14,7 +14,9 @@
 
 本次 `--bubble-skin` 同时输出四档渲染 DPI 样张；它们不是 OS DPI 切换。**Windows 桌面未验证**：真实多显示器 / 负坐标布局、跨屏 DPI 变化、拔插、睡眠与长期资源趋势；未继承旧压力结果来声称新样式长期通过。
 
-本地证据在 `artifacts/yimy-bubble-20261101/`：`tests.log`、`build.log`、`bubble-smoke.log`、`input-smoke.log`、`publish.log`、`package.log`，效果图 `bubble-preview.png`、真实窗口局部截图 `bubble-desktop.png`。产物 / 日志均排除在 Git 之外；源码与原画按已授权流程提交并正常推送，实际 Git 同步结果以本条后续记录及 `git status` 为准。
+本地证据在 `artifacts/yimy-bubble-20261101/`：`tests.log`、`build.log`、`bubble-smoke.log`、`input-smoke.log`、`publish.log`、`package.log`，效果图 `bubble-preview.png`、真实窗口局部截图 `bubble-desktop.png`。便携 ZIP 为同目录 `YimyWalk-0.1.14-yimy-bubble-win-x64.zip`，SHA-256 `90380F9AB18723C85C3DDF3942708EECDB59D8180385A7A4EB74C572311A4B05`。产物 / 日志均排除在 Git 之外。
+
+**Git 交付**：实现与原画已提交为 `2a2f3d8`（作者 `mikufilck`）。按已有授权正常推送 `origin/codex/bootstrap`，再次被 GitHub 拒绝：OAuth 缺少更新历史待推送 CI 文件的 `workflow` scope（`push.log`）。本轮没有改 CI 文件；既有待推送提交仍需该权限。未成功推送，未改写历史或绕过认证。
 
 # 2026-11-01 提交与 GitHub 推送权限核对
 
