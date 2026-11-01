@@ -65,7 +65,8 @@ public static class CharacterLoader
                 Movement = config.Movement,
                 Defaults = config.Defaults,
                 Dialogue = dialogue,
-                Animation = config.Animation
+                Animation = config.Animation,
+                Sampling = config.Sampling
             };
         }
         catch (CharacterLoadException)
@@ -195,7 +196,7 @@ public static class CharacterLoader
             new Anchor(cellWidth * 0.5f, cellHeight * 0.9f),
             new CharacterMovement(60f, 450f, 1500f, 1500f),
             new CharacterDefaults(2f, 8f, 45f, 0.01f),
-            new CharacterAnimation(3f, 8f));
+            new CharacterAnimation(3f, 8f), SpriteSampling.Nearest);
 
         var path = Path.Combine(directory, "character.json");
         if (!File.Exists(path))
@@ -253,6 +254,24 @@ public static class CharacterLoader
             animation = new CharacterAnimation(
                 ReadBoundedPositive(animationElement, "idleFps", 0f, MaxAnimationFps, directory) ?? animation.IdleFps,
                 ReadBoundedPositive(animationElement, "walkFps", 0f, MaxAnimationFps, directory) ?? animation.WalkFps);
+            if (ReadFrameSequence(animationElement, "idleFrames", 0, 2, directory) is { } idleFrames)
+                animation = animation with { IdleFrames = idleFrames };
+            if (ReadFrameSequence(animationElement, "walkFrames", 3, 5, directory) is { } walkFrames)
+                animation = animation with { WalkFrames = walkFrames };
+            animation = animation with { WalkStridePixels = ReadBoundedPositive(animationElement,
+                "walkStridePixels", 0, MaxDimension * 4, directory) };
+        }
+
+        var sampling = defaults.Sampling;
+        if (root.TryGetProperty("rendering", out var rendering))
+        {
+            EnsureObject(rendering, "rendering", directory);
+            sampling = ReadString(rendering, "sampling", directory) switch
+            {
+                null or "nearest" => SpriteSampling.Nearest,
+                "smooth" => SpriteSampling.Smooth,
+                _ => throw new CharacterLoadException(directory, "rendering.sampling must be nearest or smooth")
+            };
         }
 
         var characterDefaults = defaults.Defaults;
@@ -270,7 +289,22 @@ public static class CharacterLoader
             characterDefaults = new CharacterDefaults(idleMin, idleMax, cooldown, hunger);
         }
 
-        return new CharacterConfig(displayName, scale, anchor, movement, characterDefaults, animation);
+        return new CharacterConfig(displayName, scale, anchor, movement, characterDefaults, animation, sampling);
+    }
+
+    private static IReadOnlyList<int>? ReadFrameSequence(JsonElement element, string name, int first, int last, string directory)
+    {
+        if (!element.TryGetProperty(name, out var value)) return null;
+        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() is < 1 or > 64)
+            throw new CharacterLoadException(directory, $"animation.{name} must contain 1 to 64 frame indices");
+        var result = new List<int>();
+        foreach (var frame in value.EnumerateArray())
+        {
+            if (frame.ValueKind != JsonValueKind.Number || !frame.TryGetInt32(out var index) || index < first || index > last)
+                throw new CharacterLoadException(directory, $"animation.{name} indices must be integers between {first} and {last}");
+            result.Add(index);
+        }
+        return result;
     }
 
     private static DialogueSet ReadDialogue(string directory)
@@ -368,7 +402,8 @@ public static class CharacterLoader
         Anchor Anchor,
         CharacterMovement Movement,
         CharacterDefaults Defaults,
-        CharacterAnimation Animation);
+        CharacterAnimation Animation,
+        SpriteSampling Sampling);
 
     private readonly record struct PngHeader(int Width, int Height);
 }

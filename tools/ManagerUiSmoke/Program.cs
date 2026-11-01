@@ -14,6 +14,11 @@ internal static class Program
         global::ApplicationConfiguration.Initialize();
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
         var app = Assembly.Load("YimyWalk.App");
+        if (args.Contains("--animation-audit"))
+        {
+            YimyAnimationAudit.Run();
+            return 0;
+        }
         if (args.Contains("--bubble-skin"))
         {
             RunBubbleSkinRegression();

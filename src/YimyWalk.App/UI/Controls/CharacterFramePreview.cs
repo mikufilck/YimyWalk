@@ -89,7 +89,9 @@ internal sealed class CharacterFramePreview : UserControl
         var state = e.Graphics.Save();
         try
         {
-            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            e.Graphics.InterpolationMode = _definition?.Sampling == SpriteSampling.Smooth
+                ? System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic
+                : System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
             e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
             e.Graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
             e.Graphics.DrawImage(source, destination, 0, 0, source.Width, source.Height, GraphicsUnit.Pixel);

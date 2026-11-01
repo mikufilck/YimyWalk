@@ -7,6 +7,7 @@ public sealed class PetEngine
 {
     public const float MaxTossSpeed = 1200f;
     public const double MaxDeltaSeconds = 0.1;
+    public const float MinimumApexPoseSeconds = 0.08f;
     public const float InitialJumpDelayMin = 8f;
     public const float InitialJumpDelayMax = 16f;
     public const float InitialClimbDelayMin = 10f;
@@ -52,6 +53,29 @@ public sealed class PetEngine
         ArgumentNullException.ThrowIfNull(pet);
         var delta = (float)(double.IsFinite(deltaSeconds) ? Math.Clamp(deltaSeconds, 0, MaxDeltaSeconds) : 0);
         if (delta <= 0) return;
+        var previousState = pet.State;
+        var previousPosition = pet.FootPosition;
+        TickCore(pet, delta);
+        // A transition starts its own animation at frame zero. Reassigning Walk
+        // while following food must not restart it on every simulation update.
+        if (pet.State != previousState) return;
+        var animationDelta = delta;
+        if (pet.State is PetState.Walk or PetState.TopWalk && pet.Definition.Animation.WalkStridePixels is { } stride)
+        {
+            var dx = pet.FootPosition.X - previousPosition.X;
+            var distance = Math.Abs(dx);
+            var width = Surface.HorizontalTravelBounds.Width;
+            // Correct a wrap without counting the whole desktop as one step.
+            var expected = Math.Abs(pet.Velocity.X) * delta;
+            if (width > 0 && (expected >= width || dx * pet.Velocity.X < 0)) distance = expected;
+            animationDelta = distance / (stride * EffectiveScale(pet))
+                * pet.Definition.Animation.WalkFrames.Count / pet.Definition.Animation.WalkFps;
+        }
+        pet.AnimationTime += animationDelta;
+    }
+
+    private void TickCore(PetInstance pet, float delta)
+    {
         pet.AdvanceNeeds(delta, HungerEnabled, NeedRate);
         if (!Surface.IsValid)
         {
@@ -99,7 +123,6 @@ public sealed class PetEngine
             pet.ClearJumpCharge();
         }
         pet.StateTime += delta;
-        pet.AnimationTime += delta;
 
         if (pet.State == PetState.Dragged)
         {
@@ -145,15 +168,19 @@ public sealed class PetEngine
                 IntegrateJumpCharge(pet, area, travelBounds, delta);
                 break;
             case PetState.Jump:
+            {
+                var previousY = pet.Velocity.Y;
                 IntegrateAirborne(pet, area, travelBounds, delta);
-                if (pet.State == PetState.Jump && Math.Abs(pet.Velocity.Y) <= 25f)
+                if (pet.State == PetState.Jump && (Math.Abs(pet.Velocity.Y) <= 25f
+                    || previousY < 0 && pet.Velocity.Y >= 0))
                     pet.State = PetState.Apex;
                 else if (pet.State == PetState.Jump && pet.Velocity.Y > 25f)
                     pet.State = PetState.Fall;
                 break;
+            }
             case PetState.Apex:
                 IntegrateAirborne(pet, area, travelBounds, delta);
-                if (pet.State == PetState.Apex && pet.Velocity.Y > 25f)
+                if (pet.State == PetState.Apex && pet.Velocity.Y > 25f && pet.StateTime >= MinimumApexPoseSeconds)
                     pet.State = PetState.Fall;
                 break;
             case PetState.Fall:

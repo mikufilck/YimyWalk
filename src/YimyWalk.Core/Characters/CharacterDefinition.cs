@@ -20,6 +20,7 @@ public sealed class CharacterDefinition : IDisposable
     public required CharacterDefaults Defaults { get; init; }
     public required DialogueSet Dialogue { get; init; }
     public CharacterAnimation Animation { get; init; } = new(3, 8);
+    public SpriteSampling Sampling { get; init; } = SpriteSampling.Nearest;
     public bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
     public CharacterFrame SelectFrame(FrameKind kind, float animationSeconds = 0)
@@ -27,9 +28,10 @@ public sealed class CharacterDefinition : IDisposable
         ObjectDisposedException.ThrowIf(_disposed != 0, this);
 
         var walking = kind is FrameKind.WalkRight or FrameKind.WalkLeft;
-        var offset = kind == FrameKind.Idle || walking
-            ? (int)(Math.Max(0, animationSeconds) * (walking ? Animation.WalkFps : Animation.IdleFps) % 3) : 0;
-        var index = kind switch { FrameKind.Idle => offset, FrameKind.WalkRight or FrameKind.WalkLeft => 3 + offset, FrameKind.Jump => 6, FrameKind.Apex => 7, _ => 8 };
+        var sequence = walking ? Animation.WalkFrames : Animation.IdleFrames;
+        var seconds = float.IsFinite(animationSeconds) ? Math.Max(0, animationSeconds) : 0;
+        var offset = (int)((double)seconds * (walking ? Animation.WalkFps : Animation.IdleFps) % sequence.Count);
+        var index = kind switch { FrameKind.Idle => sequence[offset], FrameKind.WalkRight or FrameKind.WalkLeft => sequence[offset], FrameKind.Jump => 6, FrameKind.Apex => 7, _ => 8 };
         return kind == FrameKind.WalkLeft ? Frames[index] with { Kind = kind, Mirrored = true } : Frames[index];
     }
 

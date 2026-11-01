@@ -25,7 +25,7 @@ public sealed class AutonomousMovementTests
     }
 
     [Fact]
-    public void ChargedJumpUsesApexFrameAndDoesNotMoveUntilChargeCompletes()
+    public void ChargedJumpUsesGroundedJumpPoseAndDoesNotMoveUntilChargeCompletes()
     {
         using var definition = TestSpriteFactory.LoadSpriteOnly("charged-stationary");
         var pet = new PetInstance(definition, new Vector2(300, 720))
@@ -40,7 +40,7 @@ public sealed class AutonomousMovementTests
         engine.Tick(pet, 0.01);
 
         Assert.Equal(PetState.JumpCharge, pet.State);
-        Assert.Equal(FrameKind.Apex, pet.GetFrameKind());
+        Assert.Equal(FrameKind.Jump, pet.GetFrameKind());
         var position = pet.FootPosition;
         var horizontalVelocity = pet.Velocity.X;
         engine.Tick(pet, 0.1);

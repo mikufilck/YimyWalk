@@ -11,7 +11,7 @@ Characters/<id>/
 
 ## 九格协议
 
-| 索引 | 含义 | 使用方式 |
+| 索引 | 含义 | 默认使用方式 |
 | ---: | --- | --- |
 | 0–2 | 发呆 | 按 `idleFps` 循环 |
 | 3–5 | 朝右走路 | 按 `walkFps` 循环；朝左由程序水平翻转 |
@@ -19,7 +19,9 @@ Characters/<id>/
 | 7 | 最高点附近 | 短暂使用，不是循环动画 |
 | 8 | 下落 | 下降阶段使用 |
 
-第三排不是普通循环动画。直接从屏幕上方生成或拖拽释放时可以从下落帧开始。默认脚底锚点为单格宽度的 `0.5`、单格高度的 `0.9`；配置中的锚点仍以单格比例填写。
+第三排不是普通循环动画。直接从屏幕上方生成或拖拽释放时可以从下落帧开始。默认脚底锚点为单格宽度的 `0.5`、单格高度的 `0.9`；配置中的锚点仍以单格比例填写（`x`/`y` 取值 0–1）。
+
+`0–2` 与 `3–5` 的**实际播放顺序**可由 `animation.idleFrames` / `animation.walkFrames` 覆盖，见下节。
 
 ## 可选文件
 
@@ -38,7 +40,12 @@ Characters/<id>/
   "displayName": "示例小猫",
   "scale": 1.0,
   "anchor": { "x": 0.5, "y": 0.9 },
-  "animation": { "idleFps": 3, "walkFps": 8 },
+  "animation": {
+    "idleFps": 3,
+    "walkFps": 8,
+    "idleFrames": [0, 1, 2],
+    "walkFrames": [3, 4, 5]
+  },
   "movement": {
     "walkSpeed": 60,
     "jumpSpeed": 450,
@@ -50,11 +57,40 @@ Characters/<id>/
     "idleSecondsMax": 8,
     "hungerIncreasePerMinute": 0.01,
     "speechCooldownSeconds": 45
-  }
+  },
+  "rendering": { "sampling": "nearest" }
 }
 ```
 
 缺少字段会回退默认值；`schemaVersion` 若出现必须为 `1`。当前未知 JSON 属性会被忽略，不能依赖它们改变行为。数值必须是有限数并落在 Loader 的限制内，`idleSecondsMax` 不能小于 `idleSecondsMin`。
+
+## 播放序列与采样（0.3.0）
+
+在默认九格协议之上，`character.json` 可以覆盖播放顺序与缩放采样方式：
+
+```json
+{
+  "animation": {
+    "idleFps": 3,
+    "walkFps": 8,
+    "idleFrames": [0],
+    "walkFrames": [3, 4, 5, 4],
+    "walkStridePixels": 100
+  },
+  "rendering": { "sampling": "smooth" }
+}
+```
+
+| 字段 | 取值 | 缺省 | 行为 |
+| --- | --- | --- | --- |
+| `animation.idleFrames` | 1–64 个整数，每项 0–2 | `[0,1,2]` | 发呆序列，按 `idleFps` 循环 |
+| `animation.walkFrames` | 1–64 个整数，每项 3–5 | `[3,4,5]` | 行走序列，按 `walkFps` 循环；朝左仍由程序镜像 |
+| `animation.walkStridePixels` | 有限正数，≤ 8192 | `null` | 一个完整 `walkFrames` 循环对应的原图像素位移。设置后行走动画按**实际位移**推进而不是按时间；跨屏 wrap 只按实际位移计 |
+| `rendering.sampling` | `nearest` / `smooth` | `nearest` | `smooth` 使用双三次缩放，适合手绘或抗锯齿素材；`nearest` 保留像素画锐利边缘 |
+
+序列必须是整数数组：空数组、超过 64 项、越界索引、浮点数或字符串都会让角色加载失败并给出明确错误。`sampling` 只接受两个小写取值。
+
+随包的两个咿米角色使用 `idleFrames: [0]`、`walkFrames: [3,4,5,4]`、`walkStridePixels: 100`、`sampling: smooth` 与 `anchor.y: 1.0`（脚底贴单元格下沿）；`sprite.png` 原始字节未改。只有 `sprite.png` 的角色仍然完全兼容，行为与 0.1.x 一致。
 
 `dialogue.txt` 使用 UTF-8。空行以及以 `#` 或 `;` 开头的行会忽略；用 `[idle]`、`[walk]`、`[jump]` 等标题切换分组。缺少分组会回退内置台词。每个角色最多 1000 行，每行最多 500 个字符，文件最多 256 KiB。
 

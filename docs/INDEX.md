@@ -319,3 +319,18 @@ CI 只覆盖 Ubuntu 上的 restore/build/test；App 的 `EnableWindowsTargeting`
 - `MainForm` 没有赋值，消息循环由 ApplicationContext 持有；管理器从 `_manager` 与托盘追踪。
 - 工具有 App 内部接口与反射访问，重命名后需要单独构建 / 执行相关工具。
 - 硬件验收仍欠双屏、负坐标真实布局、拔插、睡眠和长时资源；不因短期通过而关闭这些验证边界。
+
+---
+
+## 13. 2026-11-01 增量（0.3.0）
+
+> 本节记录自上版索引以来的变化。与上文数字或描述冲突时，以本节与 [`STATUS.md`](STATUS.md) 最新条目为准。
+
+- **角色格式**：新增 `animation.idleFrames` / `animation.walkFrames` / `animation.walkStridePixels` 与 `rendering.sampling`；实现位于 `Core/Characters/CharacterFormat.cs`（`CharacterAnimation`、`SpriteSampling`）与 `CharacterLoader.cs`（校验 1–64 项、索引范围、采样取值）。
+- **渲染**：`App/Rendering/FrameSurfaceCache.cs` 支持 `smooth` 双三次缩放与 `nearest` 逐像素写入；`App/UI/Controls/CharacterFramePreview.cs` 跟随角色采样设置。
+- **物理**：`Core/Simulation/PetEngine.cs` 在有 `walkStridePixels` 时按实际位移推进行走动画，跨屏 wrap 只计真实位移；状态切换重置相位，`Apex` 至少保持 0.08 s。
+- **测试**：Core 新增 `AnimationRegressionTests.cs`；App 新增 `SpriteSamplingTests.cs`；当前 **Core 184 + App 24** 全部通过（替代 §5 / §10 中的 148/148 记录）。
+- **工具**：`tools/ManagerUiSmoke --animation-audit` 导出逐帧 CSV/PNG 并执行单屏动画审计。
+- **测试项目**：`tests/YimyWalk.App.Tests`（net8.0-windows）覆盖架构铁律、气泡渲染、角色权限、宿主隔离、渲染预算、设置存储与采样。
+- **版本与发布**：版本真源 `Directory.Build.props` = **0.3.0**；`PACKAGE PASS VERSION=0.3.0 FILES=15 CHECKSUMS=14`。
+- **随包角色**：两个咿米角色新增 `character.json`（`idleFrames [0]`、`walkFrames [3,4,5,4]`、`walkStridePixels 100`、`sampling smooth`、`anchor.y 1.0`），`sprite.png` 原始字节未改。

@@ -1,4 +1,5 @@
 using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using YimyWalk.Core.Characters;
 using YimyWalk.Core.Resources;
@@ -128,33 +129,69 @@ internal sealed class RenderedSurface : IDisposable
         {
             lease = owner.AcquireRenderer();
             bitmap = new Bitmap(width, height, PixelFormat.Format32bppPArgb);
-            var alpha = new byte[checked(width * height)];
-            var data = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, bitmap.PixelFormat);
-            try
+            if (definition.Sampling == SpriteSampling.Smooth && (width != frame.Width || height != frame.Height))
             {
-                var pixels = frame.RgbaPixels.Span;
-                var row = new byte[width * 4];
-                for (var y = 0; y < height; y++)
-                {
-                    for (var x = 0; x < width; x++)
-                    {
-                        var sx = x * frame.Width / width;
-                        if (mirrored) sx = frame.Width - 1 - sx;
-                        var source = (y * frame.Height / height * frame.Width + sx) * 4;
-                        var a = pixels[source + 3];
-                        row[x * 4] = (byte)(pixels[source + 2] * a / 255);
-                        row[x * 4 + 1] = (byte)(pixels[source + 1] * a / 255);
-                        row[x * 4 + 2] = (byte)(pixels[source] * a / 255);
-                        row[x * 4 + 3] = a;
-                        alpha[y * width + x] = a;
-                    }
-                    Marshal.Copy(row, 0, IntPtr.Add(data.Scan0, y * data.Stride), row.Length);
-                }
+                using var source = new Bitmap(frame.Width, frame.Height, PixelFormat.Format32bppPArgb);
+                WriteNearest(source, frame, mirrored);
+                using var graphics = Graphics.FromImage(bitmap);
+                graphics.CompositingMode = CompositingMode.SourceCopy;
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.PixelOffsetMode = PixelOffsetMode.Half;
+                using var attributes = new ImageAttributes();
+                attributes.SetWrapMode(WrapMode.TileFlipXY);
+                // Spatial resampling of this frame only: no motion blur,
+                // cross-frame blending or AI interpolation.
+                graphics.DrawImage(source, new Rectangle(0, 0, width, height),
+                    0, 0, frame.Width, frame.Height, GraphicsUnit.Pixel, attributes);
             }
-            finally { bitmap.UnlockBits(data); }
+            else WriteNearest(bitmap, frame, mirrored);
+            var alpha = ReadAlpha(bitmap);
             return new RenderedSurface(bitmap, alpha, owner, lease) { FrameIndex = frame.Index };
         }
         catch { bitmap?.Dispose(); lease?.Dispose(); owner.Dispose(); throw; }
+    }
+
+    private static void WriteNearest(Bitmap bitmap, CharacterFrame frame, bool mirrored)
+    {
+        var data = bitmap.LockBits(new Rectangle(Point.Empty, bitmap.Size), ImageLockMode.WriteOnly, bitmap.PixelFormat);
+        try
+        {
+            var pixels = frame.RgbaPixels.Span;
+            var row = new byte[bitmap.Width * 4];
+            for (var y = 0; y < bitmap.Height; y++)
+            {
+                for (var x = 0; x < bitmap.Width; x++)
+                {
+                    var sx = x * frame.Width / bitmap.Width;
+                    if (mirrored) sx = frame.Width - 1 - sx;
+                    var source = (y * frame.Height / bitmap.Height * frame.Width + sx) * 4;
+                    var a = pixels[source + 3];
+                    row[x * 4] = (byte)(pixels[source + 2] * a / 255);
+                    row[x * 4 + 1] = (byte)(pixels[source + 1] * a / 255);
+                    row[x * 4 + 2] = (byte)(pixels[source] * a / 255);
+                    row[x * 4 + 3] = a;
+                }
+                Marshal.Copy(row, 0, IntPtr.Add(data.Scan0, y * data.Stride), row.Length);
+            }
+        }
+        finally { bitmap.UnlockBits(data); }
+    }
+
+    private static byte[] ReadAlpha(Bitmap bitmap)
+    {
+        var alpha = new byte[checked(bitmap.Width * bitmap.Height)];
+        var data = bitmap.LockBits(new Rectangle(Point.Empty, bitmap.Size), ImageLockMode.ReadOnly, bitmap.PixelFormat);
+        try
+        {
+            var row = new byte[bitmap.Width * 4];
+            for (var y = 0; y < bitmap.Height; y++)
+            {
+                Marshal.Copy(IntPtr.Add(data.Scan0, y * data.Stride), row, 0, row.Length);
+                for (var x = 0; x < bitmap.Width; x++) alpha[y * bitmap.Width + x] = row[x * 4 + 3];
+            }
+        }
+        finally { bitmap.UnlockBits(data); }
+        return alpha;
     }
 
     public void Dispose()

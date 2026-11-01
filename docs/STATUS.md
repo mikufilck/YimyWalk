@@ -1,3 +1,19 @@
+# 2026-11-01 逐角色动画播放配置与 0.3.0 发布
+
+**代码已实现**：`character.json` 新增 `animation.idleFrames` / `animation.walkFrames` / `animation.walkStridePixels` 与 `rendering.sampling`；`CharacterAnimation` 持有可选帧序列（1–64 项，空数组/越界/非整数直接拒绝），`SpriteSampling` 贯通 Core 数据、App 渲染与预览。设置 `walkStridePixels` 后行走动画按实际位移推进，跨屏 wrap 只计真实位移；状态切换重置动画相位；`Apex` 至少保持 0.08 s；蓄力阶段使用起跳帧 6。两个随包咿米角色新增 `character.json`（`idleFrames [0]`、`walkFrames [3,4,5,4]`、`walkStridePixels 100`、`sampling smooth`、`anchor.y 1.0`），`sprite.png` 原始字节未改。新增 `AnimationRegressionTests`、`SpriteSamplingTests` 与 `ManagerUiSmoke --animation-audit`。
+
+**构建通过**：本机工作区 SDK 8.0.426；`dotnet build YimyWalk.sln -c Release` **0 警告 / 0 错误**（5 个项目）。
+
+**测试通过**：Core **184/184**、App **24/24**，0 失败 / 0 跳过（本轮实跑）。
+
+**Windows 桌面**：沿用本日上一会话留下的审计产物（`artifacts/yimy-animation-20261101/`）：`ANIMATION_AUDIT PASS SINGLE_DISPLAY_ONLY`，单屏 2560×1600 / 144 DPI，两个咿米角色行走序列 `3,4,5,4,3`、`CHARGE=6 JUMP=6/7/8 LAND=0 EAT=0 DRAG_RELEASE=PASS`、`FOOT_CLIP=NONE`；`input-smoke.log` 为 `RESULT PASS`。**本轮没有重跑任何 `desktop-*` smoke**，上述为既有记录而非本轮复验。
+
+**发布**：版本真源 `Directory.Build.props` 提升为 **0.3.0**；`scripts/build-yimywalk.ps1` 生成自包含单文件 x64 包到 `artifacts/publish/yimywalk-win-x64`；`scripts/test-release-package.ps1` 返回 `PACKAGE PASS VERSION=0.3.0 FILES=15 CHECKSUMS=14`；`YimyWalk.exe` FileVersion 为 `0.3.0.0`。
+
+**文档同步**：`docs/CHARACTER_FORMAT.md` 新增「播放序列与采样」章节并更新示例；`examples/character-template` 的 `character.json` 与 README 同步；`docs/INDEX.md` 补登记字段、测试项目、审计入口与当前验证数字；`RELEASE_NOTES.md` 新增 0.3.0 段。
+
+**未验证边界**：多显示器 / 负坐标 / 物理拔插 / 睡眠唤醒 / 完整 DPI 组合 / 长时间资源趋势仍为 `Windows 桌面未验证`；动画审计只覆盖单屏，`smooth` 采样在跨屏 DPI 切换下的呈现未单独验收。
+
 > **最新相关交接优先**：当前短摘要见 [`MAINTENANCE.md`](MAINTENANCE.md)，结构导航见 [`INDEX.md`](INDEX.md)。本文件按日期记录证据；先读顶部，再按功能定位最新相关条目。旧测试结果只适用于当时的代码、环境与范围。
 
 # 2026-11-01 咿米气泡重绘与接入

@@ -32,7 +32,20 @@ public sealed record CharacterDefaults(
     float SpeechCooldownSeconds,
     float HungerIncreasePerMinute = 0.01f);
 
-public sealed record CharacterAnimation(float IdleFps, float WalkFps);
+public sealed record CharacterAnimation(float IdleFps, float WalkFps)
+{
+    private static readonly IReadOnlyList<int> DefaultIdle = Array.AsReadOnly(new[] { 0, 1, 2 });
+    private static readonly IReadOnlyList<int> DefaultWalk = Array.AsReadOnly(new[] { 3, 4, 5 });
+    private IReadOnlyList<int> _idleFrames = DefaultIdle;
+    private IReadOnlyList<int> _walkFrames = DefaultWalk;
+    public IReadOnlyList<int> IdleFrames { get => _idleFrames; init => _idleFrames = Array.AsReadOnly(value.ToArray()); }
+    public IReadOnlyList<int> WalkFrames { get => _walkFrames; init => _walkFrames = Array.AsReadOnly(value.ToArray()); }
+    // Optional source-image pixels travelled per complete walking cycle.
+    // Null preserves the time-based animation contract of sprite-only roles.
+    public float? WalkStridePixels { get; init; }
+}
+
+public enum SpriteSampling { Nearest, Smooth }
 
 public sealed class CharacterLoadException : Exception
 {

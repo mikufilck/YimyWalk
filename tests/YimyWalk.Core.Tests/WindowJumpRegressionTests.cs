@@ -23,7 +23,7 @@ public sealed class WindowJumpRegressionTests
             var engine = new PetEngine(world, new ZeroRandom()) { JumpDesire = 1, WindowJumpDesire = 1, GlobalScale = scale, ClimbDesire = 0 };
             engine.Tick(pet, .01);
             Assert.Equal(PetState.JumpCharge, pet.State);
-            Assert.Equal(FrameKind.Apex, pet.GetFrameKind());
+            Assert.Equal(FrameKind.Jump, pet.GetFrameKind());
             var start = pet.FootPosition;
             engine.Tick(pet, .1);
             Assert.Equal(start, pet.FootPosition);

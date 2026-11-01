@@ -1,5 +1,18 @@
 # Unreleased
 
+（暂无）
+
+# YimyWalk v0.3.0
+
+## 逐角色动画播放配置
+
+- `character.json` 新增 `animation.idleFrames` / `animation.walkFrames`：在 0–2 与 3–5 范围内自定义播放顺序（1–64 项）。空数组、越界索引、浮点数或字符串会让角色加载失败并给出明确错误，不静默回退。
+- 新增 `animation.walkStridePixels`：行走动画按实际位移推进，跨屏 wrap 只计真实位移；缺省为 `null`，旧角色继续按时间播放。
+- 新增 `rendering.sampling`：`nearest`（像素画，默认）或 `smooth`（双三次，适合手绘素材）。桌面渲染与管理器预览使用同一设置。
+- 状态切换会重置动画相位，继续行走不会每帧重启；最高点姿态至少保持 0.08 秒；蓄力阶段改用起跳帧 6。
+- 两个随包咿米角色新增 `character.json`（`idleFrames [0]`、`walkFrames [3,4,5,4]`、`walkStridePixels 100`、`sampling smooth`、`anchor.y 1.0`），`sprite.png` 原始字节未改。
+- 新增 Core `AnimationRegressionTests`、App `SpriteSamplingTests`，以及 `ManagerUiSmoke --animation-audit` 逐帧审计入口。
+
 ## 咿米语言气泡
 
 - 默认语言气泡重绘为咿米粉白风格：双层圆框、犬耳与肉垫、条纹蝴蝶结、金铃铛和浅蓝点缀。

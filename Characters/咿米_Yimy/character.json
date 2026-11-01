@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "anchor": { "x": 0.5, "y": 1.0 },
+  "animation": {
+    "idleFrames": [0],
+    "walkFrames": [3, 4, 5, 4],
+    "walkStridePixels": 100
+  },
+  "rendering": { "sampling": "smooth" }
+}

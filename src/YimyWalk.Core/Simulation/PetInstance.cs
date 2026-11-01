@@ -9,6 +9,7 @@ public sealed class PetInstance
     public const float MaxScale = 8f;
 
     private float? _scaleOverride;
+    private PetState _state;
 
     public PetInstance(CharacterDefinition definition, Vector2 footPosition, Guid? instanceId = null)
     {
@@ -24,7 +25,17 @@ public sealed class PetInstance
     public Vector2 FootPosition { get; internal set; }
     public Vector2 Velocity { get; internal set; }
     public FacingDirection Facing { get; internal set; }
-    public PetState State { get; internal set; }
+    public PetState State
+    {
+        get => _state;
+        internal set
+        {
+            if (_state == value) return;
+            _state = value;
+            StateTime = 0;
+            AnimationTime = 0;
+        }
+    }
     public float StateTime { get; internal set; }
     public float AnimationTime { get; internal set; }
     public bool IsDragging => State == PetState.Dragged;
@@ -135,7 +146,7 @@ public sealed class PetInstance
         {
             PetState.Walk when Facing == FacingDirection.Left => FrameKind.WalkLeft,
             PetState.Walk => FrameKind.WalkRight,
-            PetState.JumpCharge => FrameKind.Apex,
+            PetState.JumpCharge => FrameKind.Jump,
             PetState.Jump => FrameKind.Jump,
             PetState.Apex => FrameKind.Apex,
             PetState.Fall => FrameKind.Fall,
