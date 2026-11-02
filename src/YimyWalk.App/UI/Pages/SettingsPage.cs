@@ -1,7 +1,6 @@
 using YimyWalk.App.Host;
 using YimyWalk.App.Settings;
 using YimyWalk.App.UI.Controls;
-using YimyWalk.Core.Display;
 
 namespace YimyWalk.App.UI.Pages;
 
@@ -10,7 +9,7 @@ internal sealed class SettingsPage : ManagerPage
     private readonly AntdUI.InputNumber _scale = UiTheme.CreateInputNumber(0.1m, 8m, 0.1m, 1, 120);
     private readonly AntdUI.Select _display = UiTheme.CreateSelect(300);
     private readonly AntdUI.Switch _landing = UiTheme.CreateSwitch();
-    private readonly Label _status = UiTheme.CreateBodyLabel();
+    private readonly Label _status = UiTheme.CreateMutedLabel();
     private readonly Label _diagnostic = UiTheme.CreateMutedLabel();
     private readonly AntdUI.Button _retry = UiTheme.CreateButton("重试保存");
     private bool _syncing;
@@ -18,27 +17,19 @@ internal sealed class SettingsPage : ManagerPage
     public SettingsPage(AppHost host) : base(host)
     {
         var layout = CreateRootLayout();
-        AddHeading(layout, "设置", "把小窝布置成，你最舒服的样子。");
+        AddHeading(layout, "设置");
         var display = new SettingRows(320);
-        display.Add("桌宠显示缩放", "大一点抱抱，小一点陪伴。0.1–8.0，修改后立即生效。", _scale);
-        display.Add("新桌宠出现的位置", "挑一块屏幕，作为这次相遇的起点。", _display);
-        display.Add("允许落到可见窗口顶部", "让她停在窗口边缘，陪你一起看世界。", _landing);
-        AddRow(layout, display.InCard("她的桌面舞台"));
-
-        var save = UiTheme.CreateCard(); save.SurfaceColor = UiTheme.BlueWash;
-        save.AutoSize = true; save.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        var rows = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 1, Margin = Padding.Empty };
-        rows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        rows.Controls.Add(UiTheme.SectionTitle("偏好会被好好记住"), 0, 0);
-        _status.Font = UiTheme.SectionFont;
-        rows.Controls.Add(_status, 0, 1); rows.Controls.Add(_diagnostic, 0, 2);
-        rows.Controls.Add(_retry, 0, 3);
-        rows.SizeChanged += (_, _) =>
+        display.Add("桌宠缩放", "范围 0.1–8.0，修改后立即生效。", _scale);
+        display.Add("默认显示器", "用于放置新创建的桌宠。", _display);
+        display.Add("窗口顶部落脚", "允许桌宠停在可见窗口的上边缘。", _landing);
+        AddRow(layout, display);
+        _status.Margin = new Padding(0, 20, 0, 6);
+        AddRow(layout, _status); AddRow(layout, _diagnostic); AddRow(layout, _retry);
+        layout.SizeChanged += (_, _) =>
         {
-            var width = Math.Max(1, rows.ClientSize.Width - 8);
+            var width = Math.Max(1, layout.ClientSize.Width - 8);
             _status.MaximumSize = new Size(width, 0); _diagnostic.MaximumSize = new Size(width, 0);
         };
-        save.Controls.Add(rows); AddRow(layout, save);
         _retry.Click += (_, _) => Host.RetrySettingsSave();
         _scale.ValueChanged += (_, _) => { if (!_syncing) Host.GlobalScale = (float)_scale.Value; };
         _display.SelectedIndexChanged += (_, _) =>
@@ -58,9 +49,10 @@ internal sealed class SettingsPage : ManagerPage
             RefreshStatus($"设置：{UiText.SaveStateLabel(Host.SettingsSaveState)}");
             var load = Host.SettingsLoad.Diagnostic;
             var firstRun = load == "主设置文件：文件不存在；备份设置文件：文件不存在" || load == "设置文件不存在，已使用默认值";
-            _diagnostic.Text = Host.SettingsSaveError is { Length: > 0 } error ? $"保存错误：{error}"
-                : firstRun || string.IsNullOrWhiteSpace(load) ? "不用找保存按钮，修改后会自动记住。"
+            _diagnostic.Text = Host.SettingsSaveError is { Length: > 0 } error ? $"保存失败：{error}"
+                : firstRun || string.IsNullOrWhiteSpace(load) ? ""
                 : Host.SettingsLoad.UsedBackup ? $"已从备份恢复设置。{load}" : load;
+            _diagnostic.Visible = _diagnostic.Text.Length > 0;
         }
         finally { _syncing = false; }
     }

@@ -13,6 +13,13 @@ internal sealed class ManagerForm : Form
 {
     private readonly AppHost _host;
     private readonly Panel _pageHost = new() { Dock = DockStyle.Fill, BackColor = UiTheme.Cream };
+    private readonly LinkLabel _saveError = new()
+    {
+        Text = "设置保存失败，点击查看并重试。", AccessibleName = "设置保存失败",
+        Dock = DockStyle.Bottom, AutoSize = true, Visible = false,
+        Font = UiTheme.BodyFont, LinkColor = UiTheme.NavInk, ActiveLinkColor = UiTheme.Ink,
+        LinkBehavior = LinkBehavior.HoverUnderline, Padding = new Padding(28, 8, 28, 16)
+    };
     private readonly Dictionary<ManagerPageId, ManagerPage> _pages = new();
     private readonly Dictionary<ManagerPageId, AntdUI.Button> _navigation = new();
     private readonly PictureBox _brandLogo = new()
@@ -34,7 +41,7 @@ internal sealed class ManagerForm : Form
     {
         _host = host;
         UiTheme.ConfigureAntd();
-        Text = "YimyWalk · 咿米的桌面小窝";
+        Text = "YimyWalk";
         Icon = AppIcon.Load();
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96, 96);
@@ -93,12 +100,12 @@ internal sealed class ManagerForm : Form
         sidebarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, LogicalToDeviceUnits(84)));
         sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, LogicalToDeviceUnits(190)));
+        sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, LogicalToDeviceUnits(60)));
         sidebar.Controls.Add(sidebarLayout);
 
         var brand = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty };
         var wordmark = UiTheme.CreateBodyLabel("YimyWalk"); wordmark.Font = UiTheme.BrandFont;
-        brand.Controls.Add(wordmark); brand.Controls.Add(UiTheme.CreateMutedLabel("咿米的桌面小窝"));
+        brand.Controls.Add(wordmark); brand.Controls.Add(UiTheme.CreateMutedLabel("桌宠管理"));
         sidebarLayout.Controls.Add(brand, 0, 0);
 
         using (var stream = typeof(ManagerForm).Assembly.GetManifestResourceStream("YimyWalk.App.Resources.logo.png")
@@ -116,19 +123,19 @@ internal sealed class ManagerForm : Form
 
         var footer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, UiTheme.Space8, 0, 0) };
         sidebarLayout.Controls.Add(footer, 0, 2);
-        var companion = new CompanionArt { Dock = DockStyle.Fill };
-        footer.Controls.Add(companion);
         footer.Controls.Add(_brandLogo);
         sidebar.SizeChanged += (_, _) =>
         {
             var room = sidebar.ClientSize.Height - sidebar.Padding.Vertical - LogicalToDeviceUnits(84) - 264;
-            sidebarLayout.RowStyles[2].Height = Math.Clamp(room, 0, LogicalToDeviceUnits(190));
+            sidebarLayout.RowStyles[2].Height = Math.Clamp(room, 0, LogicalToDeviceUnits(60));
             footer.Visible = room > 54;
         };
 
         var content = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.Cream, Padding = Padding.Empty, Margin = Padding.Empty };
         root.Controls.Add(content, 1, 0);
         content.Controls.Add(_pageHost);
+        content.Controls.Add(_saveError);
+        _saveError.LinkClicked += (_, _) => SelectPage(ManagerPageId.Settings);
 
         SelectPage(ManagerPageId.Overview);
     }
@@ -169,6 +176,9 @@ internal sealed class ManagerForm : Form
             page.RefreshFromHost();
         }
         finally { _pageHost.ResumeLayout(true); }
+        // Initial wrapping is measured before a new page receives its final
+        // width. Recalculate the scroll extent after that layout has settled.
+        page.PerformLayout();
     }
 
     private ManagerPage CreatePage(ManagerPageId pageId)
@@ -197,6 +207,7 @@ internal sealed class ManagerForm : Form
 
     public void SetSettingsStatus(string status)
     {
+        RefreshSaveFailure();
         if (_pages.TryGetValue(ManagerPageId.Settings, out var page) && page is SettingsPage settings)
             settings.RefreshStatus(status);
         RefreshAllPages();
@@ -208,9 +219,16 @@ internal sealed class ManagerForm : Form
     {
         if (_refreshing || IsDisposed || _host.IsExiting || !Visible || WindowState == FormWindowState.Minimized) return;
         _refreshing = true;
-        try { if (_pages.TryGetValue(_selectedPage, out var page)) page.RefreshFromHost(); }
+        try
+        {
+            RefreshSaveFailure();
+            if (_pages.TryGetValue(_selectedPage, out var page)) page.RefreshFromHost();
+        }
         finally { _refreshing = false; }
     }
+
+    private void RefreshSaveFailure()
+        => _saveError.Visible = _host.SettingsSaveState == Settings.SettingsSaveState.Failed;
 
     private void OnRefreshTick(object? sender, EventArgs e) => RefreshAllPages();
 

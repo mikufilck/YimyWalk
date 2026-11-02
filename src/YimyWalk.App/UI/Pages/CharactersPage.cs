@@ -18,7 +18,6 @@ internal sealed class CharactersPage : ManagerPage
     };
     private readonly Label _roleName = UiTheme.CreateBodyLabel();
     private readonly Label _roleId = UiTheme.CreateMutedLabel();
-    private readonly Label _roleInfo = UiTheme.CreateBodyLabel();
     private readonly Label _reloadStatus = UiTheme.CreateMutedLabel();
     private readonly CharacterFramePreview _preview;
     private readonly AntdUI.Button _refresh = UiTheme.CreateButton("刷新角色");
@@ -30,12 +29,11 @@ internal sealed class CharactersPage : ManagerPage
         _preview = new CharacterFramePreview(host.SurfaceCache) { Dock = DockStyle.Fill, MinimumSize = new Size(220, 220) };
         _characters.Columns.Add("名称", 100);
         _characters.Columns.Add("角色 ID", 80);
-        _characters.Columns.Add("状态", 50);
         _characters.Columns.Add("默认", 50);
 
         var layout = CreateRootLayout();
         layout.Dock = DockStyle.Fill; layout.AutoSize = false;
-        AddHeading(layout, "角色", "每一种模样，都值得好好珍藏。");
+        AddHeading(layout, "角色");
 
         var content = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, MinimumSize = new Size(0, 430), ColumnCount = 2, RowCount = 1 };
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
@@ -44,9 +42,7 @@ internal sealed class CharactersPage : ManagerPage
         var listCard = UiTheme.CreateCard();
         listCard.Dock = DockStyle.Fill;
         listCard.MinimumSize = new Size(0, 430);
-        var listTitle = new Label { Text = "角色列表", AutoSize = true, Font = UiTheme.SectionFont, ForeColor = UiTheme.Ink, Dock = DockStyle.Top };
         listCard.Controls.Add(_characters);
-        listCard.Controls.Add(listTitle);
         content.Controls.Add(listCard, 0, 0);
 
         var detailCard = UiTheme.CreateCard();
@@ -61,7 +57,7 @@ internal sealed class CharactersPage : ManagerPage
         {
             if (_characters.SelectedItems.Count == 0 || _characters.SelectedItems[0].Tag is not RoleChoice role) return;
             Host.SetSelectedRole(role.Id);
-            _reloadStatus.Text = $"已将“{role.DisplayName}”设为下次创建默认角色。";
+            _reloadStatus.Text = $"默认角色已设为 {role.DisplayName}。";
             RefreshCharacters();
             ShowSelectedRole();
         };
@@ -74,8 +70,6 @@ internal sealed class CharactersPage : ManagerPage
         _roleName.Font = UiTheme.SectionFont;
         AddDetailRow(details, _roleName);
         AddDetailRow(details, _roleId);
-        _roleInfo.MaximumSize = new Size(430, 0);
-        AddDetailRow(details, _roleInfo);
         AddDetailRow(details, _reloadStatus);
         detailCard.Controls.Add(details);
         content.Controls.Add(detailCard, 1, 0);
@@ -84,8 +78,8 @@ internal sealed class CharactersPage : ManagerPage
         layout.RowStyles[layout.RowCount - 1] = new RowStyle(SizeType.Percent, 100);
         _characters.SizeChanged += (_, _) =>
         {
-            var widths = new[] { .34, .32, .17, .17 };
-            for (var i = 0; i < 4; i++) _characters.Columns[i].Width = Math.Max(48, (int)((_characters.ClientSize.Width - 6) * widths[i]));
+            var widths = new[] { .4, .4, .2 };
+            for (var i = 0; i < 3; i++) _characters.Columns[i].Width = Math.Max(48, (int)((_characters.ClientSize.Width - 6) * widths[i]));
         };
 
         _characters.SelectedIndexChanged += (_, _) =>
@@ -120,7 +114,6 @@ internal sealed class CharactersPage : ManagerPage
                     var choice = new RoleChoice(definition.Id, UiText.CharacterName(definition.DisplayName));
                     var row = new ListViewItem(choice.DisplayName) { Tag = choice };
                     row.SubItems.Add(choice.Id);
-                    row.SubItems.Add("可用");
                     row.SubItems.Add(choice.Id.Equals(current, StringComparison.OrdinalIgnoreCase) ? "当前" : string.Empty);
                     _characters.Items.Add(row);
                 }
@@ -160,7 +153,6 @@ internal sealed class CharactersPage : ManagerPage
         {
             _roleName.Text = "没有可用角色";
             _roleId.Text = string.Empty;
-            _roleInfo.Text = string.Empty;
             _setDefault.Enabled = false;
             _preview.ShowIdleFrame(null);
             return;
@@ -169,7 +161,6 @@ internal sealed class CharactersPage : ManagerPage
         _roleName.Text = UiText.CharacterName(definition.DisplayName);
         _roleId.Text = $"角色 ID：{definition.Id}";
         var isDefault = definition.Id.Equals(Host.SelectedRoleId, StringComparison.OrdinalIgnoreCase);
-        _roleInfo.Text = $"{(isDefault ? "新建桌宠将使用此角色。" : "预览中，不会改变默认角色。")}{Environment.NewLine}走动速度 {definition.Movement.WalkSpeed:0.#} px/s。";
         _setDefault.Text = isDefault ? "当前默认" : "设为默认角色";
         _setDefault.Enabled = !isDefault;
         _preview.ShowIdleFrame(definition);

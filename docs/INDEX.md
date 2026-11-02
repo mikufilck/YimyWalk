@@ -128,18 +128,18 @@ graph TD
 | `Windows/BubbleWindow.cs` | 咿米逐像素 Alpha 气泡窗口：整窗穿透 / 不激活，跟随宠物与 DPI，钳制到所在屏工作区 |
 | `Windows/FoodWindow.cs` | 20×20 无激活且整窗输入透明的食物窗口，金色圆点随消耗缩放 |
 | `Windows/NativeMethods.cs` | **唯一 Win32 P/Invoke 集中地** |
-| `UI/ManagerForm.cs` | 咿米小窝外壳：216 逻辑像素侧栏、自定义标题栏、5 页缓存、可见时 200 ms 刷新；普通关闭隐藏回托盘，最大化尊重工作区 |
-| `UI/ManagerPage.cs` | 页面基类 + 标题/卡片布局辅助（标题间距按字体实测高度计算） |
+| `UI/ManagerForm.cs` | 管理器外壳：216 逻辑像素侧栏、自定义标题栏、5 页缓存、可见时 200 ms 刷新；切页重新计算滚动范围，普通关闭隐藏回托盘，最大化尊重工作区 |
+| `UI/ManagerPage.cs` | 页面基类与标题布局辅助；说明文字可省略，不保留空白高度 |
 | `UI/UiTheme.cs` | 颜色/字体/间距常量 + AntdUI 控件工厂 |
-| `UI/Controls/UiCard.cs` / `UiMotifs.cs` | 圆角纸面、荷叶边、狗爪 / 骨头与内置导航 SVG；布局 Padding 与绘制分开 |
-| `UI/Controls/CompanionArt.cs` / `ThemedListView.cs` | 既有角色原画装饰、自绘列表表头 / 选中行；资源由控件释放 |
-| `UI/Controls/SettingRows.cs` / `ManagerChrome.cs` / `CompanionMenuRenderer.cs` | 设置分组、自定义窗口操作与托盘菜单配色 |
+| `UI/Controls/UiCard.cs` / `UiMotifs.cs` | 列表 / 详情圆角面板与内置 SVG 图标；布局 Padding 与绘制分开 |
+| `UI/Controls/ThemedListView.cs` | 自绘列表表头 / 选中行；资源由控件释放 |
+| `UI/Controls/SettingRows.cs` / `ManagerChrome.cs` / `CompanionMenuRenderer.cs` | 设置行、自定义窗口操作与托盘菜单配色 |
 | `UI/TrayIconHost.cs` | `NotifyIcon` + 右键菜单（打开管理器 / 隐藏 / 显示 / 清空 / 退出） |
 | `UI/AppIcon.cs` | 读取嵌入资源 `yimywalk.ico`（EXE / 管理窗口 / 托盘图标三处一致） |
 | `UI/PetListProjection.cs` | 以 `Guid` 为主键的行模型与选中态投影 |
-| `UI/InstanceSettingState.cs` | 生成「跟随全局 / 实例自定义 / 受全局限制」等中文来源说明 |
+| `UI/InstanceSettingState.cs` | 生成走动 / 气泡的全局开关状态及暂停提示；数值设置不重复显示来源与数值 |
 | `UI/Controls/CharacterFramePreview.cs` | 单帧 idle(index 0) 静态预览（按原分辨率取帧 + NearestNeighbor） |
-| `UI/Pages/OverviewPage.cs` | 总览：活动/待创建计数、快捷 1/10/50/100、暂停、喂食、虚拟食物、隐藏/显示 |
+| `UI/Pages/OverviewPage.cs` | 总览：运行计数、条件显示的待创建数、默认角色原帧、数量 1/10/50/100 + 创建按钮、常用操作 |
 | `UI/Pages/PetsPage.cs` | 桌宠：列表 + 单实例覆盖（走动/气泡/活跃度/缩放/三种欲望） |
 | `UI/Pages/CharactersPage.cs` | 角色：列表、详情、idle 预览、刷新角色、设为下次创建默认角色 |
 | `UI/Pages/InteractionsPage.cs` | 互动：全局默认（走动/气泡/饥饿/外部反馈/活跃度）+ 气泡总闸（优先级为运行级，设置实际会持久化） |
@@ -195,7 +195,7 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `tools/DesktopSmoke` | `<rounds 1–20> <role> [landing] [targeted]` | 真实创建/清空 1/10/50/100 窗口，输出 CPU_S/工作集/私有字节/托管堆/句柄/USER/GDI |
 | `tools/DesktopDisplaySmoke` | `<characterRoot> [--rounds 1–100] [--inventory]`；**<2 块扩展显示器 → `UNVERIFIED` + 退出码 2** | 多显示器/DPI 矩阵：每屏生成落地行走跳跃、透明穿透、实体命中、跨屏拖拽 |
 | `tools/DesktopInputSmoke` | 无参数 | 真实鼠标输入 + 主菜单/托盘生命周期 |
-| `tools/ManagerUiSmoke` | `[--baseline]` / `[--preview-pixels]` / `[--bubble-skin]` / `[--animation-audit]` / `[--visual-review]` | 管理器五页 / 最小窗口 / 标题栏、预览像素、气泡与动画分入口复核 |
+| `tools/ManagerUiSmoke` | `[--baseline]` / `[--preview-pixels]` / `[--bubble-skin]` / `[--animation-audit]` / `[--visual-review [--output <目录>]]` | 管理器五页 / 最小窗口 / 标题栏、预览像素、气泡与动画分入口复核；截图默认 `artifacts/ui-review` |
 | `tools/GenerateTestCharacters.ps1` | `[-Root <dir>]` | 生成测试用 cat/slime 角色图 |
 
 `ManagerUiSmoke` 没有单独的 PowerShell 包装。先执行 `.tools/dotnet/dotnet.exe build tools/ManagerUiSmoke/ManagerUiSmoke.csproj -c Release -p:Platform=x64`，再在可见桌面执行 `.tools/dotnet/dotnet.exe tools/ManagerUiSmoke/bin/x64/Release/net8.0-windows/ManagerUiSmoke.dll --baseline`；不传参数运行完整模式，`--preview-pixels` 运行像素回归。
@@ -235,7 +235,7 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `docs/ARCHITECTURE.md` | 当前分层决策、真实类型和资源边界 | 决定代码该放哪一层时读 |
 | `docs/CHARACTER_FORMAT.md` | 角色包格式的**对外契约**（supported / planned 已区分） | 改角色格式或写文档时读 |
 | `docs/TESTING.md` | 验收入口与 Windows 桌面验收矩阵 | 决定"怎么算通过"时读 |
-| `docs/UI_DESIGN.md` / `docs/assets/ui-overview.png` | 咿米小窝的视觉方向、组件地图、实际首页与复核入口 | 改管理器、标题栏、菜单或设计样式时读 |
+| `docs/UI_DESIGN.md` / `docs/assets/ui-overview.png` | 管理器的文案 / 布局约定、组件地图、实际首页与复核入口 | 改管理器、标题栏、菜单或设计样式时读 |
 | `docs/YIMY_VISUAL_STYLE.md` / `docs/artwork/yimy-bubble-prompt.txt` | 咿米主题、气泡原画来源 / hash / 提示词、切图与复核入口 | 改气泡外观或替换皮肤时读 |
 | `docs/UPSTREAM_AUDIT.md` | eSheep 上游审计结论（固定提交、许可、代码路径） | 需要复核上游时读；**在仓库外取源码** |
 | `docs/assets/*.png` | 可重复生成的预览/参考图 | 改角色格式文档配图 |

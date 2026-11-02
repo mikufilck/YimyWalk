@@ -35,7 +35,7 @@ Core 使用注入的随机源、表面和显示器契约，时间由调用方显
 
 ## 资源生命周期
 
-管理器视觉仍完全位于 App：UiTheme 与代码内小图案提供一致样式，UiCard 使用原生布局 Padding，自定义标题栏复用 NativeMethods 集中的 Win32 入口。列表保留原生键盘 / 选择行为，装饰原画与预览位图各自释放；页面继续缓存，未改 Core 或设置 schema。设计和验证边界见 [UI_DESIGN](UI_DESIGN.md)。
+管理器视觉仍完全位于 App：UiTheme 与内置 SVG 提供一致样式，UiCard 只用于实际列表 / 详情分栏并使用原生布局 Padding，自定义标题栏复用 NativeMethods 集中的 Win32 入口。角色预览持有并释放 SurfaceLease，首页复用同一个预览控件展示默认角色；页面继续缓存，未改 Core 或设置 schema。设计和验证边界见 [UI_DESIGN](UI_DESIGN.md)。
 
 角色扫描产生新的不可变定义；只有校验成功的定义才替换目录索引。现存实例持有旧定义的安全引用，等实例释放后旧图片才可回收。坏包刷新时保留上一份可用定义并记录错误。相同角色的 100 个实例不得重复解码同一图片。
 
@@ -53,7 +53,7 @@ Core 使用注入的随机源、表面和显示器契约，时间由调用方显
 
 `YimyWalk.App.Host.WindowSurfaceResolver` owns the low-frequency `EnumWindows` snapshot and the platform filters for desktop shell, DWM/input, UWP child, and tiny helper windows. `DesktopWorldSurface` owns the fallback display snapshot and enables landing only when the host explicitly opts in. The existing M1 mapping remains one pet instance to one layered window, with every window managed by one `AppHost` process. Closing or losing a supporting window therefore changes only the affected pet's surface selection; it never moves or closes the user's window.
 
-The manager's “允许宠物落到可见窗口顶部” checkbox is the user entry point. It is off by default, persisted in validated settings, and can be changed without restarting the host. The manager starts hidden. A normal close cancels the close and hides it to the tray; opening it shows a normal taskbar window. Explicit host exit disposes it. Settings including the dialogue master gate persist, while per-pet overrides remain runtime-only.
+The manager's “窗口顶部落脚” switch is the user entry point. It is on by default (since 2026-11-02), persisted in validated settings, and can be changed without restarting the host. The manager starts hidden. A normal close cancels the close and hides it to the tray; opening it shows a normal taskbar window. Explicit host exit disposes it. Settings including the dialogue master gate persist, while per-pet overrides remain runtime-only.
 
 M3.1 adds `Hunger`, `Boredom`, and the short `Eat` state to each `PetInstance`. `CharacterDefaults.HungerIncreasePerMinute` is immutable role data; the mutable values stay on the instance. `PetEngine` applies bounded need deltas with a session-level enable/rate setting, and `FeedAll` is exposed by the manager without adding any desktop API to Core. Feeding is rejected while dragging, jumping, falling, or already eating, so movement/input priority remains explicit.
 

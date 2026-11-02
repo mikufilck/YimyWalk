@@ -12,27 +12,6 @@ internal static class UiMotifs
         p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.Left, r.Bottom - d, d, d, 90, 90);
         p.CloseFigure(); return p;
     }
-    internal static void Paw(Graphics g, RectangleF r, Color color)
-    {
-        var saved = g.Save(); g.TranslateTransform(r.X, r.Y); g.ScaleTransform(r.Width / 32, r.Height / 32);
-        using var brush = new SolidBrush(color);
-        g.FillEllipse(brush, 2, 9, 7, 10); g.FillEllipse(brush, 9, 2, 7, 10);
-        g.FillEllipse(brush, 18, 2, 7, 10); g.FillEllipse(brush, 25, 9, 7, 10);
-        using var pad = new GraphicsPath();
-        pad.AddBezier(7, 26, 7, 20, 12, 14, 17, 14); pad.AddBezier(17, 14, 22, 14, 27, 21, 27, 26);
-        pad.AddBezier(27, 26, 27, 32, 20, 28, 17, 28); pad.AddBezier(17, 28, 12, 28, 7, 32, 7, 26);
-        g.FillPath(brush, pad); g.Restore(saved);
-    }
-    internal static void Bone(Graphics g, RectangleF r, Color fill, Color line)
-    {
-        var saved = g.Save(); g.TranslateTransform(r.X, r.Y); g.ScaleTransform(r.Width / 48, r.Height / 24);
-        using var p = new GraphicsPath();
-        p.AddBezier(12, 7, 7, -4, -3, 3, 3, 12); p.AddBezier(3, 12, -3, 22, 8, 29, 12, 17);
-        p.AddLine(12, 17, 36, 17); p.AddBezier(36, 17, 41, 29, 52, 22, 45, 12);
-        p.AddBezier(45, 12, 52, 3, 41, -4, 36, 7); p.CloseFigure();
-        using var b = new SolidBrush(fill); using var pen = new Pen(line, 1.3f);
-        g.FillPath(b, p); g.DrawPath(pen, p); g.Restore(saved);
-    }
     internal static string Icon(string kind)
     {
         var shape = kind switch

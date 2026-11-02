@@ -48,14 +48,15 @@ internal abstract class ManagerPage : UserControl
         return layout;
     }
 
-    protected Panel AddHeading(TableLayoutPanel layout, string title, string subtitle)
+    protected Panel AddHeading(TableLayoutPanel layout, string title, string subtitle = "")
     {
         var heading = new Panel
         {
             Dock = DockStyle.Top,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Margin = new Padding(0, 0, 0, 20),
-            MinimumSize = new Size(0, 76)
+            MinimumSize = Size.Empty
         };
         var titleLabel = new Label
         {
@@ -79,8 +80,9 @@ internal abstract class ManagerPage : UserControl
         var titleHeight = titleLabel.GetPreferredSize(Size.Empty).Height;
         subtitleLabel.Location = new Point(2, titleHeight + UiTheme.Space8);
         var subtitleHeight = subtitleLabel.GetPreferredSize(new Size(760, 0)).Height;
-        heading.MinimumSize = new Size(0, Math.Max(76, subtitleLabel.Top + subtitleHeight + UiTheme.Space8));
-        heading.Controls.Add(subtitleLabel);
+        heading.MinimumSize = new Size(0, string.IsNullOrWhiteSpace(subtitle) ? titleHeight + UiTheme.Space8 : subtitleLabel.Top + subtitleHeight + UiTheme.Space8);
+        if (!string.IsNullOrWhiteSpace(subtitle)) heading.Controls.Add(subtitleLabel);
+        else subtitleLabel.Dispose();
         heading.Controls.Add(titleLabel);
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.Controls.Add(heading, 0, layout.RowCount++);

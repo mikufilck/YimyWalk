@@ -56,7 +56,10 @@ internal static class Program
                 Call(host, "PausePets");
                 Pump(80);
                 Console.WriteLine($"VISUAL_REVIEW DPI={manager.DeviceDpi} CLIENT={manager.ClientSize} SCREEN={Screen.PrimaryScreen!.WorkingArea}");
-                var output = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../../artifacts/ui-redesign-20261103"));
+                var outputFlag = Array.IndexOf(args, "--output");
+                if (outputFlag >= 0 && outputFlag + 1 >= args.Length) throw new ArgumentException("--output requires a directory");
+                var output = outputFlag >= 0 ? Path.GetFullPath(args[outputFlag + 1])
+                    : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../../artifacts/ui-review"));
                 Directory.CreateDirectory(output);
                 foreach (var pageName in new[] { "Overview", "Pets", "Characters", "Interactions", "Settings" })
                 {
@@ -109,6 +112,17 @@ internal static class Program
             }
             Page("Overview");
             SaveShot("overview");
+            var overview = VisiblePage();
+            SetProp(Field(overview, "_createCount"), "SelectedIndex", 1);
+            ((IButtonControl)Field(overview, "_create")).PerformClick();
+            Pump(200);
+            Require((int)Prop(host, "ActivePetCount") == 10 && (int)Prop(host, "PendingCreationCount") == 0,
+                "overview creates the selected quantity through the host queue");
+            Require(((IEnumerable)Prop(host, "ActivePets")).Cast<object>().All(pet =>
+                Equals(Prop(Prop(pet, "Definition"), "Id"), Prop(host, "SelectedRoleId"))),
+                "overview creates the current default role");
+            Call(host, "ClearPets");
+            Console.WriteLine("OVERVIEW_CREATE quantity=10 default_role=PASS");
             foreach (var label in Descendants(manager).OfType<Label>().Where(label => label.Text.Contains("YimyWalk", StringComparison.Ordinal)))
                 Console.WriteLine($"LABEL text={label.Text} bounds={label.Bounds} parent={label.Parent?.GetType().Name} parentBounds={label.Parent?.Bounds} visible={label.Visible}");
             var sidebar = Descendants(manager).First(control => control.Name == "Sidebar");
@@ -154,7 +168,7 @@ internal static class Program
             list.Items[0].Selected = true;
             Pump(40);
             var petsPage = VisiblePage();
-            var scaleLabel = FindText(petsPage, "桌宠大小");
+            var scaleLabel = FindText(petsPage, "桌宠缩放");
             Require(scaleLabel is { Visible: true } && IsFullyVisible(scaleLabel),
                 "pets instance scale setting is visible after selecting an instance");
             var scaleMode = Field(petsPage, "_scaleMode");
@@ -221,6 +235,27 @@ internal static class Program
                 Require(list.Items.Count == (int)Prop(host, "ActivePetCount"), "list/core counts");
             }
             Console.WriteLine("PASS mixed head/middle/tail deletion");
+            // Make only this smoke's temporary settings target unwritable,
+            // then verify that a save failure is discoverable on another page.
+            Page("Interactions");
+            var settingsFile = Path.Combine(temp, "settings.json");
+            if (File.Exists(settingsFile)) File.Delete(settingsFile);
+            Directory.CreateDirectory(settingsFile);
+            SetProp(host, "GlobalScale", 1.1f);
+            Pump(500);
+            Require(Prop(host, "SettingsSaveState").ToString() == "Failed", "isolated settings write fails");
+            var saveError = (LinkLabel)Field(manager, "_saveError");
+            Require(saveError.Visible && IsFullyVisible(saveError), "save failure remains visible outside the settings page");
+            Call(saveError, "OnLinkClicked", new LinkLabelLinkClickedEventArgs(saveError.Links[0]));
+            Pump(30);
+            Require(Prop(manager, "SelectedPage").ToString() == "Settings"
+                && ((Control)Field(VisiblePage(), "_retry")).Visible, "save failure link opens settings and exposes retry");
+            Directory.Delete(settingsFile);
+            ((IButtonControl)Field(VisiblePage(), "_retry")).PerformClick();
+            Pump(500);
+            Require(Prop(host, "SettingsSaveState").ToString() == "Saved" && !saveError.Visible,
+                "successful retry removes the failure notice");
+            Console.WriteLine("SAVE_FAILURE notice_navigation_retry=PASS");
             return 0;
         }
         catch (Exception error) { Console.WriteLine(error); return 1; }
@@ -366,17 +401,31 @@ internal static class Program
     static void AssertPageLayout(string name)
     {
         var page = VisiblePage();
+        Console.WriteLine($"PAGE_LAYOUT {name} viewport={page.ClientSize} extent={((ScrollableControl)page).DisplayRectangle} root={page.Controls[0].Bounds} preferred={page.Controls[0].GetPreferredSize(new Size(page.ClientSize.Width, 0))}");
+        if (name is "Overview" or "Interactions" or "Settings")
+        {
+            var scroll = (ScrollableControl)page;
+            if (page.Controls[0].Bottom <= page.ClientSize.Height - page.Padding.Bottom)
+                Require(!scroll.VerticalScroll.Visible, $"{name} does not show a scrollbar when its content fits");
+        }
         var required = name switch
         {
-            "Overview" => new[] { "欢迎回到小窝", "陪伴小日常", "正在陪伴", "安心记住" },
+            "Overview" => new[] { "总览", "桌宠：", "默认角色：", "数量" },
             "Pets" => new[] { "桌宠" },
-            "Characters" => new[] { "角色", "角色列表", "角色 ID：" },
-            "Interactions" => new[] { "互动", "陪伴的方式", "一点小脾气", "留一点安静" },
-            "Settings" => new[] { "设置", "她的桌面舞台", "偏好会被好好记住" },
+            "Characters" => new[] { "角色", "角色 ID：" },
+            "Interactions" => new[] { "互动", "主动走动", "自动气泡总开关", "跳跃倾向 (%)" },
+            "Settings" => new[] { "设置", "桌宠缩放", "默认显示器", "窗口顶部落脚" },
             _ => Array.Empty<string>()
         };
         foreach (var text in required)
             Require(FindText(page, text) is { Visible: true, Height: > 0 }, $"{name} visible text: {text}");
+
+        if (name == "Overview")
+        {
+            var preview = Descendants(page).Single(control => control.Name == "DefaultRolePreview");
+            Require(Equals(Prop(Prop(preview, "Definition"), "Id"), Prop(host, "SelectedRoleId"))
+                && Equals(Prop(preview, "CurrentFrameIndex"), 0), "overview previews the default role's original idle frame");
+        }
 
         foreach (var label in Descendants(page).OfType<Label>().Where(label => label.Visible && label.Text.Length > 0))
         {
@@ -407,7 +456,7 @@ internal static class Program
                 && Convert.ToDecimal(Property(control, "Minimum")) == 0m
                 && Convert.ToDecimal(Property(control, "Maximum")) == 100m).ToArray();
             Require(desireInputs.Length >= 3, "interactions exposes 0-100 jump/climb/window jump desire inputs");
-            Require(page is ScrollableControl scrollable && scrollable.VerticalScroll.Maximum > 0, "interactions page exposes vertical scrolling for full content");
+            Require(page is ScrollableControl { AutoScroll: true }, "interactions can scroll when the available height is insufficient");
         }
         if (name == "Settings")
         {
@@ -417,7 +466,7 @@ internal static class Program
         }
         if (name == "Pets")
         {
-            Require(FindText(page, "桌宠大小") is { Visible: true }, "pets exposes per-instance size setting");
+            Require(FindText(page, "桌宠缩放") is { Visible: true }, "pets exposes per-instance size setting");
             Require(Descendants(page).Any(control => control.GetType().Name == "Select"), "pets uses AntdUI scale source select");
             Require(Descendants(page).Any(control => control.GetType().Name == "InputNumber" &&
                 Convert.ToDecimal(Property(control, "Minimum")) == 0.1m &&
@@ -430,7 +479,7 @@ internal static class Program
         if (name == "Characters")
         {
             var roleList = Descendants(page).OfType<ListView>().SingleOrDefault(list => list.Visible);
-            Require(roleList is not null && roleList.Columns.Count >= 4 && roleList.Items.Count > 0, "characters uses a role list with status columns");
+            Require(roleList is not null && roleList.Columns.Count == 3 && roleList.Items.Count > 0, "characters lists name, ID and default status");
             Require(Descendants(page).Any(control => control.GetType().Name == "Button" && control.Text?.Contains("默认", StringComparison.Ordinal) == true), "characters has default-role action");
             var preview = Descendants(page).FirstOrDefault(control => control.GetType().Name == "CharacterFramePreview");
             Require(preview is not null && preview.Width >= 220 && preview.Height >= 220, "character preview has usable size");

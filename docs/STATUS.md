@@ -1,3 +1,23 @@
+# 2026-11-03 管理器文案与布局精简
+
+**基线与范围**：接续 `6374a17`。用户反馈文案刻意、卡片与小标题过多，要求使用自然或直接的功能描述。本轮保留粉白配色和实际操作，删除装饰文案与重复信息。当前约定见 [UI_DESIGN](UI_DESIGN.md)，更新后的首页见 [ui-overview.png](assets/ui-overview.png)。
+
+**① 代码已实现**：删除欢迎区、三张状态卡片、重复创建快捷按钮和设置页的装饰卡片 / 小标题；总览改为默认角色原帧、数量选择与创建按钮，常用操作直接排列。互动与设置使用设置行；桌宠与角色保留列表 / 详情分栏，移除重复参数数值说明、恒定“可用”列与列表标题。统一“桌宠缩放”“跳跃 / 攀爬倾向”，保留保存错误、备份恢复、重试、全局气泡开关影响与单只设置重启后恢复的说明。删除无调用的 CompanionArt、装饰绘制与图片嵌入项；原始素材不变。
+
+**布局修正**：新页面在取得最终宽度前先按窄宽度测量，内容收缩后 ScrollableControl 仍保留旧滚动范围，导致设置 / 互动页出现空滚动条。SelectPage 完成布局后显式重算页面布局，已检查默认与最小窗口；新增“内容放得下时不显示滚动条”断言。首页新增数量 10 的真实队列创建检查，预览断言核对默认角色与原始第 0 帧。旧测试里要求互动页一定有滚动范围的断言改为检查可滚动能力与实际内容可达性。
+
+保存失败改为所有页面共用的条件提示，点击进入设置页查看错误并重试，成功后隐藏。完整 UI smoke 在自己的临时目录制造真实写入失败，核对提示可见、跳转、重试恢复，输出 `SAVE_FAILURE notice_navigation_retry=PASS`；没有通过隐藏错误来精简界面。
+
+**② 构建通过**：ManagerUiSmoke、DesktopInputSmoke 与发布构建 0 警告 / 0 错误。实跑 `scripts/build-yimywalk.ps1 -PublishPath artifacts/ui-simplify-20261103/publish` 与 `scripts/test-release-package.ps1 -Path artifacts/ui-simplify-20261103/publish`，输出 `PACKAGE PASS VERSION=0.3.1 FILES=15 CHECKSUMS=14`。本地 ZIP：`artifacts/ui-simplify-20261103/YimyWalk-0.3.1-ui-simplified-win-x64.zip`；SHA-256 `9942BF2E3A3F18641A8A816924B406517EEF5E1254212AAC747BBCCE46208059`。版本仍为 0.3.1，正式标签与 Release 未替换。
+
+**③ Core 测试通过**：`scripts/test-yimywalk.ps1` 与发布流程实跑 Core **187** / App **24**，0 失败、0 跳过。Core、角色 PNG、角色动画与设置 schema 均未改。
+
+**④ Windows 桌面已验证（本次范围）**：当前单屏 2560×1600、工作区 2560×1528、144 DPI / 150%。`ManagerUiSmoke --baseline`、完整模式、`--preview-pixels`、`--visual-review --output artifacts/ui-simplify-20261103` 通过；默认客户区 1680×1140 与最小窗口 1440×960 的五页布局检查通过，已逐页查看应用自身渲染图。数量创建、单只参数覆盖 / 重置、刷新、删除与清空检查通过。独立 `scripts/desktop-input-smoke.ps1` 返回 `RESULT PASS`：真实鼠标拖动 / 缩放 `FRAME_REAL_DRAG_RESIZE=PASS`，关闭 / 重开、角色刷新、开关、喂食 / 食物、拖拽与透明路由、跨进程气泡 / 食物穿透和焦点、托盘与退出通过。
+
+**Windows 桌面未验证**：多屏、真实跨屏 DPI、OS 缩放切换、拔插 / 睡眠与长时压力。四档预览像素计算与应用截图不能代替这些验收。
+
+产物：`artifacts/ui-simplify-20261103/` 下的 `build.log`、`tests.log`、`layout.log`、`full-ui.log`、`pixels.log`、`visual-review.log`、`input-smoke.log`、`publish.log`、`package.log` 与五页 PNG。测试使用隔离设置目录，不写真实设置。文案偏好已记入 MAINTENANCE；索引与架构说明已同步，架构文档旧的“窗口落脚默认关闭”更正为昨天已实现的默认开启。Git 作者仍为本地 `mikufilck <xuw05302@gmail.com>`；按既有授权提交并正常推送维护分支，实际同步状态以 Git 为准。
+
 # 2026-11-03 咿米小窝 UI 重做与预览包
 
 **基线与范围**：接续 `491aebc` 与昨天的 0.3.1 收尾，不回滚默认角色 / 启动生成 / 待机与行走节奏。用户要求优先美观、可爱和角色风格，并补充狗爪、骨头等参考元素。本轮重做 App 管理器与托盘 UI；未调用绘画工具，未改角色 PNG、图标源文件、动画、Core 或设置 schema。设计与组件入口见 [UI_DESIGN](UI_DESIGN.md)，首页实际渲染图见 [ui-overview.png](assets/ui-overview.png)。

@@ -33,7 +33,6 @@ internal static class UiTheme
     public static Font BodyFont { get; } = new(UiFont, 9.5f, FontStyle.Regular);
     public static Font SmallFont { get; } = new(UiFont, 8.5f, FontStyle.Regular);
     public static Font NavFont { get; } = new(UiFont, 10f, FontStyle.Bold);
-    public static Font NumberFont { get; } = new("Segoe UI", 25f, FontStyle.Bold);
 
     public static void ConfigureAntd()
     {
@@ -186,9 +185,4 @@ internal static class UiTheme
         page.Font = BodyFont;
     }
 
-    public static Label SectionTitle(string text) => new()
-    {
-        Text = text, AutoSize = true, Font = SectionFont, ForeColor = Ink,
-        BackColor = Color.Transparent, Margin = new Padding(0, 0, 0, 14)
-    };
 }

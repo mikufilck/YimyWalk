@@ -8,7 +8,7 @@ internal sealed class ManagerChrome : Panel
     internal ManagerChrome(ManagerForm owner)
     {
         Dock = DockStyle.Fill; BackColor = UiTheme.Cream;
-        var caption = UiTheme.CreateMutedLabel("YimyWalk   /   咿米的桌面小窝");
+        var caption = UiTheme.CreateMutedLabel("YimyWalk");
         caption.Dock = DockStyle.Fill; caption.TextAlign = ContentAlignment.MiddleLeft;
         caption.AutoSize = false; caption.Padding = new Padding(18, 0, 0, 0);
         var controls = new FlowLayoutPanel { Dock = DockStyle.Right, Width = 126, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = Padding.Empty };
