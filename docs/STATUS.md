@@ -1,3 +1,22 @@
+# 2026-11-03 v0.3.2 正式发布完成
+
+**发布结果**：[GitHub Release](https://github.com/mikufilck/YimyWalk/releases/tag/v0.3.2) 已发布，`draft=false`、`prerelease=false`，并核对为 latest。发布提交 `589e10a88096c69200300526036c4fa2e2e0ffb4`，注解标签 v0.3.2 已推送，远端标签解引用指向该提交。GitHub Release ID `431811322`；本条仅补交接文档，不移动标签、不改发布附件。
+
+**① 代码已实现**：Directory.Build.props 与正式版本说明为 0.3.2；本次把前述 UI / 共享组件 / 两处交互修复及待机 5–35 秒、行走 3–20 秒默认区间纳入正式版本。发布夹具修正与原始落脚失败保留在上一条。
+
+**② 构建通过**：从干净的发布提交重建，`YimyWalk.exe` 的 FileVersion=`0.3.2.0`，ProductVersion=`0.3.2+589e10a88096c69200300526036c4fa2e2e0ffb4`，与标签一致。验包 `PACKAGE PASS VERSION=0.3.2 FILES=15 CHECKSUMS=14`；ZIP 15 个文件与发布目录逐一计算 SHA-256 比对通过。上传后逐附件核对名称、uploaded 状态、字节数与服务端 digest，随后转正式发布，并再次核对 Release / latest 状态。
+
+- [yimywalk-v0.3.2-win-x64.zip](https://github.com/mikufilck/YimyWalk/releases/download/v0.3.2/yimywalk-v0.3.2-win-x64.zip)：71,225,617 字节，SHA-256 `7D9AD8978BFF46B2291CB54AE1DB08760C36B02915B68209BD7FB7F9A1C78F21`。
+- [SHA256SUMS.txt](https://github.com/mikufilck/YimyWalk/releases/download/v0.3.2/SHA256SUMS.txt)：95 字节，文件自身 SHA-256 `3D2F5C04C9296D08C09F2EF85952B64D9C753D49630741BAE4DD50271E478431`。
+
+**③ Core 测试通过**：最终发布构建重新实跑 Core **187** / App **24**，0 失败、0 跳过。发布提交的 [GitHub Actions](https://github.com/mikufilck/YimyWalk/actions/runs/41498379238) 为 success，Windows / Ubuntu 矩阵均通过；CI 不执行桌面验收。
+
+**④ Windows 桌面已验证（本次范围）**：本轮 0.3.2 的单屏 2560×1600、144 DPI / 150% 下，完整管理器 / 五页默认与最小窗口、真实 input smoke、窗口落脚 / 关闭后再下落及 1/10/50/100 创建清空通过。首轮落脚夹具受其他窗口影响的失败与诊断、修正后结果均见上一条，不隐藏原始失败。发布包自检和 ZIP 校验不作为桌面输入证据。
+
+**Windows 桌面未验证**：多屏、跨屏 / OS DPI 切换、物理拔插、睡眠及长期资源趋势。跨屏 smoke 的可选参数反射修正仅编译，不声称该硬件分支实跑通过。
+
+证据保存在 `artifacts/release-0.3.2/`：最终 publish.log / package.log、ZIP / SHA256SUMS.txt、GitHub CI 日志、remote-assets.json、published-release.json、桌面与 UI 日志及首次失败 / 诊断。正式发布未覆盖 v0.3.1；SDK、日志与发布产物不提交 Git。全程使用本机既有 mikufilck 作者身份，没有修改全局配置。
+
 # 2026-11-03 v0.3.2 发布预检
 
 用户要求构建并发布 0.3.2。基线 `d165970`；版本真源已升为 0.3.2，Unreleased 内容归入正式版本说明，README 的下载入口改为当前仓库。远端尚无 v0.3.2 标签或 Release，工作区原先干净；GitHub CLI 可访问当前仓库，上一提交 GitHub Actions 为 success。

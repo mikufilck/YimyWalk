@@ -41,7 +41,7 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 | 档位 | 结果 |
 | --- | --- |
 | ① 代码已实现 | UI-01–05 组件审查与修正：完整单只重置、刷新保留预览、共享数值编辑器 / 设置行 / 布局 / 列表 / 按钮入口，以及桌宠 / 角色页重排；保持可爱风格，Core / 角色 PNG / 动画 / 设置 schema 未改 |
-| ② 构建通过 | 本地 SDK 8.0.426；0.3.2 发布预检构建 / 验包通过（15 个文件 / 14 条校验）；待从发布提交重建并上传正式 Release，不能把预检包当作已发布附件 |
+| ② 构建通过 | 本地 SDK 8.0.426；0.3.2 已从干净的发布提交 589e10a 重建，EXE 文件版本 / 提交号与标签一致；验包 15 文件 / 14 校验、ZIP 逐文件比对与远端附件摘要核对通过。GitHub Windows / Ubuntu CI 成功，正式 Release 已发布 |
 | ③ Core 测试通过 | 本次 Core 187 / App 24 均通过，0 失败、0 跳过 |
 | ④ Windows 桌面 | 本次 0.3.2 单屏 2560×1600、144 DPI / 150%：完整 input / UI smoke 与五页默认 / 最小窗口通过；窗口落脚 / 关闭后再下落及 1/10/50/100 创建清空通过。首次落脚检查受其他窗口影响，探针隔离修正及原始失败证据见 STATUS。多屏 / OS DPI 切换 / 长期压力未验证 |
 
@@ -49,7 +49,7 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 
 ## 下一次工作的入口
 
-0.3.2 发布准备与证据位于 `artifacts/release-0.3.2/`，待从发布提交重建 ZIP、校验、推送标签并创建 GitHub Release；以 STATUS 最新条目和远端实查为准。旧 UI 预览目录仅供对照。组件重构见 [UI-01–05](reviews/2026-11-03-ui-components.md)，界面约定见 [UI_DESIGN](UI_DESIGN.md)。后续优先复用 NumberOverrideEditor / SettingRows / UiLayout，保持简短文案与可爱布局。多屏等硬件验收具备条件时继续，不能用文档或截图把 UNVERIFIED 改成 PASS。
+当前正式版为 [v0.3.2](https://github.com/mikufilck/YimyWalk/releases/tag/v0.3.2)，标签指向 589e10a；Windows x64 ZIP 与 SHA256SUMS.txt 已发布，非草稿、非预发布，当前 latest。完整摘要和远端证据见 STATUS，产物位于 `artifacts/release-0.3.2/`；旧预览仅供对照。后续修改应进入下一维护版本，不覆盖已发布标签或附件。组件维护继续复用 NumberOverrideEditor / SettingRows / UiLayout，保持简短文案与可爱布局。多屏等硬件验收具备条件时继续，不把 UNVERIFIED 改写为 PASS。
 
 保留 HardLimit 公开 API 与 WarningLimit 设置字段的兼容性；它们未在生产启用，不自动构成获准删除的理由。后续结构拆分由实际改动需要决定，不照抄旧评审的拆类数量目标。
 
