@@ -129,9 +129,9 @@ graph TD
 | `Windows/FoodWindow.cs` | 20×20 无激活且整窗输入透明的食物窗口，金色圆点随消耗缩放 |
 | `Windows/NativeMethods.cs` | **唯一 Win32 P/Invoke 集中地** |
 | `UI/ManagerForm.cs` | 管理器外壳：216 逻辑像素侧栏、自定义标题栏、5 页缓存、可见时 200 ms 刷新；切页重新计算滚动范围，普通关闭隐藏回托盘，最大化尊重工作区 |
-| `UI/ManagerPage.cs` | 页面基类与标题布局辅助；说明文字可省略，不保留空白高度 |
+| `UI/ManagerPage.cs` | 页面基类与标题布局辅助、标题狗爪点缀；说明文字可省略，不保留空白高度 |
 | `UI/UiTheme.cs` | 颜色/字体/间距常量 + AntdUI 控件工厂 |
-| `UI/Controls/UiCard.cs` / `UiMotifs.cs` | 列表 / 详情圆角面板与内置 SVG 图标；布局 Padding 与绘制分开 |
+| `UI/Controls/UiCard.cs` / `UiMotifs.cs` | 欢迎区 / 操作区 / 列表详情圆角面板、可选装饰边、狗爪几何与内置 SVG 图标；布局 Padding 与绘制分开 |
 | `UI/Controls/ThemedListView.cs` | 自绘列表表头 / 选中行；资源由控件释放 |
 | `UI/Controls/SettingRows.cs` / `ManagerChrome.cs` / `CompanionMenuRenderer.cs` | 设置行、自定义窗口操作与托盘菜单配色 |
 | `UI/TrayIconHost.cs` | `NotifyIcon` + 右键菜单（打开管理器 / 隐藏 / 显示 / 清空 / 退出） |
@@ -139,7 +139,7 @@ graph TD
 | `UI/PetListProjection.cs` | 以 `Guid` 为主键的行模型与选中态投影 |
 | `UI/InstanceSettingState.cs` | 生成走动 / 气泡的全局开关状态及暂停提示；数值设置不重复显示来源与数值 |
 | `UI/Controls/CharacterFramePreview.cs` | 单帧 idle(index 0) 静态预览（按原分辨率取帧 + NearestNeighbor） |
-| `UI/Pages/OverviewPage.cs` | 总览：运行计数、条件显示的待创建数、默认角色原帧、数量 1/10/50/100 + 创建按钮、常用操作 |
+| `UI/Pages/OverviewPage.cs` | 总览：简短欢迎语与粉色创建区，运行计数、默认角色原帧、数量 1/10/50/100 + 创建按钮；白色操作区 |
 | `UI/Pages/PetsPage.cs` | 桌宠：列表 + 单实例覆盖（走动/气泡/活跃度/缩放/三种欲望） |
 | `UI/Pages/CharactersPage.cs` | 角色：列表、详情、idle 预览、刷新角色、设为下次创建默认角色 |
 | `UI/Pages/InteractionsPage.cs` | 互动：全局默认（走动/气泡/饥饿/外部反馈/活跃度）+ 气泡总闸（优先级为运行级，设置实际会持久化） |

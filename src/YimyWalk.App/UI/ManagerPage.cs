@@ -1,4 +1,5 @@
 using YimyWalk.App.Host;
+using YimyWalk.App.UI.Controls;
 
 namespace YimyWalk.App.UI;
 
@@ -84,6 +85,12 @@ internal abstract class ManagerPage : UserControl
         if (!string.IsNullOrWhiteSpace(subtitle)) heading.Controls.Add(subtitleLabel);
         else subtitleLabel.Dispose();
         heading.Controls.Add(titleLabel);
+        heading.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var size = 20 * heading.DeviceDpi / 96f;
+            UiMotifs.Paw(e.Graphics, new RectangleF(titleLabel.Right + size / 2, titleLabel.Top + (titleLabel.Height - size) / 2, size, size), UiTheme.Coral);
+        };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.Controls.Add(heading, 0, layout.RowCount++);
         return heading;

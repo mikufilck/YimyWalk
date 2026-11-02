@@ -5,6 +5,23 @@ namespace YimyWalk.App.UI.Controls;
 /// <summary>Code-native UI ornaments; character artwork is never modified.</summary>
 internal static class UiMotifs
 {
+    internal static void Paw(Graphics graphics, RectangleF bounds, Color color)
+    {
+        using var brush = new SolidBrush(color);
+        var state = graphics.Save();
+        try
+        {
+            graphics.TranslateTransform(bounds.X, bounds.Y);
+            graphics.ScaleTransform(bounds.Width / 24f, bounds.Height / 24f);
+            graphics.FillEllipse(brush, 2, 6, 4, 6);
+            graphics.FillEllipse(brush, 7, 2, 4, 6);
+            graphics.FillEllipse(brush, 13, 2, 4, 6);
+            graphics.FillEllipse(brush, 18, 6, 4, 6);
+            graphics.FillEllipse(brush, 6, 11, 12, 10);
+        }
+        finally { graphics.Restore(state); }
+    }
+
     internal static GraphicsPath Round(RectangleF r, float radius)
     {
         var p = new GraphicsPath(); var d = Math.Max(1, Math.Min(radius * 2, Math.Min(r.Width, r.Height)));

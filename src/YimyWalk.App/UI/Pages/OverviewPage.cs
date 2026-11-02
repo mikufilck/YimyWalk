@@ -17,23 +17,32 @@ internal sealed class OverviewPage : ManagerPage
     public OverviewPage(AppHost host) : base(host)
     {
         var layout = CreateRootLayout();
-        AddHeading(layout, "总览");
-        var status = Flow();
-        status.Controls.Add(_active); status.Controls.Add(_pending);
-        AddRow(layout, status);
+        AddHeading(layout, "欢迎回来！");
+
+        var welcome = UiTheme.CreateCard();
+        welcome.Name = "WelcomePanel";
+        welcome.SurfaceColor = UiTheme.Sidebar;
+        welcome.DecorativeEdge = true;
+        welcome.Height = LogicalToDeviceUnits(250);
+        welcome.Padding = new Padding(28, 22, 28, 28);
 
         var creation = new TableLayoutPanel
         {
-            Name = "CreatePet", Dock = DockStyle.Top, Height = LogicalToDeviceUnits(190),
-            ColumnCount = 2, RowCount = 1, Margin = new Padding(0, 16, 0, 20)
+            Name = "CreatePet", Dock = DockStyle.Fill,
+            ColumnCount = 2, RowCount = 1, Margin = Padding.Empty
         };
-        creation.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LogicalToDeviceUnits(200)));
-        creation.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        var form = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, Margin = new Padding(24, 12, 0, 0) };
+        creation.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
+        creation.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+        var form = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, Margin = new Padding(0, 24, 16, 0) };
         form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         _defaultRole.Font = UiTheme.SectionFont;
-        _defaultRole.Margin = new Padding(0, 12, 0, 18);
+        _defaultRole.Margin = new Padding(0, 12, 0, 12);
         form.Controls.Add(_defaultRole, 0, 0);
+        var status = Flow();
+        status.Margin = new Padding(0, 0, 0, 24);
+        status.Controls.Add(_active); status.Controls.Add(_pending);
+        form.Controls.Add(status, 0, 1);
+        form.SizeChanged += (_, _) => _defaultRole.MaximumSize = new Size(Math.Max(1, form.ClientSize.Width), 0);
         var createRow = Flow();
         var quantity = UiTheme.CreateBodyLabel("数量");
         quantity.Margin = new Padding(0, 12, 12, 0);
@@ -47,25 +56,35 @@ internal sealed class OverviewPage : ManagerPage
             Host.QueueCreate(Host.SelectedRoleId, count); RefreshFromHost();
         };
         createRow.Controls.Add(quantity); createRow.Controls.Add(_createCount); createRow.Controls.Add(_create);
-        form.Controls.Add(createRow, 0, 1); creation.Controls.Add(form, 1, 0);
-        _preview = new CharacterFramePreview(host.SurfaceCache) { Dock = DockStyle.Fill, Name = "DefaultRolePreview" };
-        creation.Controls.Add(_preview, 0, 0);
-        AddRow(layout, creation);
+        form.Controls.Add(createRow, 0, 2); creation.Controls.Add(form, 0, 0);
+        _preview = new CharacterFramePreview(host.SurfaceCache)
+        {
+            Dock = DockStyle.Fill, Name = "DefaultRolePreview", BackColor = UiTheme.Sidebar,
+            Margin = new Padding(8, 16, 8, 8)
+        };
+        creation.Controls.Add(_preview, 1, 0);
+        welcome.Controls.Add(creation);
+        AddRow(layout, welcome);
 
         var actions = Flow();
-        void AddAction(string text, Action action)
+        void AddAction(string text, Action action, string? icon = null)
         {
             var button = UiTheme.CreateButton(text);
+            if (icon is not null) button.IconSvg = UiMotifs.Icon(icon);
             button.Click += (_, _) => action(); actions.Controls.Add(button);
         }
-        AddAction("喂食全部", () => Host.FeedAll());
-        AddAction("投放食物", () => Host.SpawnVirtualFood());
+        AddAction("喂食全部", () => Host.FeedAll(), "bone");
+        AddAction("投放食物", () => Host.SpawnVirtualFood(), "bone");
         _pause.Click += (_, _) => { if (Host.IsPaused) Host.ResumePets(); else Host.PausePets(); RefreshFromHost(); };
         actions.Controls.Add(_pause);
         AddAction("隐藏桌宠", () => Host.SetPetsVisible(false));
         AddAction("显示桌宠", () => Host.SetPetsVisible(true));
         AddAction("一键清空", () => Host.ClearPets());
-        AddRow(layout, actions); AddRow(layout, _operation);
+        var actionPanel = UiTheme.CreateCard();
+        actionPanel.AutoSize = true; actionPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        actionPanel.Padding = new Padding(20, 20, 10, 10);
+        actionPanel.Controls.Add(actions);
+        AddRow(layout, actionPanel); AddRow(layout, _operation);
     }
 
     private static FlowLayoutPanel Flow() => new()

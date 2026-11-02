@@ -105,7 +105,7 @@ internal sealed class ManagerForm : Form
 
         var brand = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty };
         var wordmark = UiTheme.CreateBodyLabel("YimyWalk"); wordmark.Font = UiTheme.BrandFont;
-        brand.Controls.Add(wordmark); brand.Controls.Add(UiTheme.CreateMutedLabel("桌宠管理"));
+        brand.Controls.Add(wordmark); brand.Controls.Add(UiTheme.CreateMutedLabel("咿米的桌面"));
         sidebarLayout.Controls.Add(brand, 0, 0);
 
         using (var stream = typeof(ManagerForm).Assembly.GetManifestResourceStream("YimyWalk.App.Resources.logo.png")

@@ -1,18 +1,18 @@
 # 管理器界面约定
 
-最近调整：2026-11-03。用户要求保留咿米的粉白风格，同时把文案改成功能性描述，删除无实际用途的卡片和小标题。当前首页见 [实际渲染图](assets/ui-overview.png)。
+最近调整：2026-11-03。用户明确纠正：精简啰嗦文案，不是删除所有欢迎语或牺牲可爱设计。保持咿米的粉白风格、角色展示与布局层次，欢迎语简短自然，功能说明直白。当前首页见 [实际渲染图](assets/ui-overview.png)。
 
 ## 文案与布局
 
-- 按钮直接写动作，例如“创建桌宠”“投放食物”“刷新角色”。不用欢迎标语、陪伴口号、英文装饰标题或拟人化的保存提示。
+- 首页保留一句“欢迎回来！”。不再叠加多句口号或长篇陪伴描述；按钮直接写动作，例如“创建桌宠”“投放食物”“刷新角色”。
 - 每页保留一个主标题。仅在需要说明操作范围时添加说明，例如互动页的全局默认与单只设置关系；无说明时不预留高度。
 - 参数名称保持一致：桌宠缩放、活跃度倍率、跳跃 / 攀爬 / 窗口跳跃倾向。说明只解释范围、影响或限制，不复述控件里已经显示的值。
-- 卡片用于真实的列表 / 详情分栏。设置项直接排成行，不为状态、说明或单个按钮建立卡片。
+- 欢迎区承载角色预览和创建操作，下面用圆角操作区整理按钮；桌宠 / 角色页保留列表与详情。设置项直接排成行，不为每个状态、说明或单个按钮建立卡片。不能把精简文案等同于去掉所有视觉层次。
 - 待创建数量、运行诊断、保存错误与恢复提示按实际状态显示。保存失败时，任意页底部均显示可点击的提示，进入设置页查看错误并重试；成功后隐藏。真实损坏诊断不能当作冗余文案删除。
 
 | 页面 | 内容 |
 | --- | --- |
-| 总览 | 运行数量、默认角色原帧、数量选择与创建按钮；下方直接排列喂食、食物、暂停、隐藏 / 显示和清空操作 |
+| 总览 | 简短欢迎语、粉色创建区：左侧默认角色 / 数量 / 创建，右侧原帧预览；下方白色圆角操作区容纳喂食、食物、暂停、隐藏 / 显示和清空 |
 | 桌宠 | 左侧列表，右侧单只桌宠状态、预览与设置。数值直接显示在编辑器里；走动 / 气泡保留必要的全局状态与暂停提示 |
 | 角色 | 左侧名称 / ID / 默认角色列表，右侧预览与刷新 / 设为默认操作；删除恒定的“可用”列与重复列表标题 |
 | 互动 | 开关与数值两栏，不再嵌套分组卡片；总开关影响全部桌宠的说明保留 |
@@ -20,15 +20,15 @@
 
 ## 视觉与素材
 
-背景 `#FFF9FB`，侧栏 `#FFEDF4`，主操作 `#BE5881`，正文 `#5B4151`，次要文字 `#8B7181`，边框 `#EFDAE5`。保留圆角控件、白色选中导航与小型图标。移除大幅欢迎装饰、荷叶边和重复角色插画。
+背景 `#FFF9FB`，侧栏与欢迎区 `#FFEDF4`，主操作 `#BE5881`，正文 `#5B4151`，次要文字 `#8B7181`，边框 `#EFDAE5`。保留圆角控件、白色选中导航与角色展示。各页标题旁用粉色小狗爪点缀，欢迎区用细虚线装饰边，喂食 / 食物操作带骨头图标；不依靠堆叠文案制造可爱感。
 
 角色素材遵守作者手绘要求。首页与详情均通过 `CharacterFramePreview` 展示所选角色的原始 idle 第 0 帧；不生成或修改角色图。用户参考图未切图打包，未新增依赖或在线资源。
 
 ## 维护入口
 
 - `UiTheme`：颜色、字体、间距与控件工厂。按钮的实际尺寸提供留白，AntdUI Padding 不用于扩大按钮。
-- `UiCard`：列表 / 详情面板的圆角与细边，使用原生 Padding 布局子控件。
-- `UiMotifs`：内置 SVG 图标；`ThemedListView`：原生列表选择 / 键盘行为与表头配色。
+- `UiCard`：欢迎区 / 操作区 / 列表详情面板的圆角与细边，可选装饰虚线；使用原生 Padding 布局子控件。
+- `UiMotifs`：内置 SVG 图标与代码绘制的小狗爪；`ThemedListView`：原生列表选择 / 键盘行为与表头配色。
 - `SettingRows`：标签 / 必要说明与编辑器分栏；不创建空说明行。
 - `ManagerPage`：按实际标题 / 说明高度布局。`ManagerForm.SelectPage` 在最终布局后重算滚动范围，避免初次窄宽度测量残留空滚动条。
 - `ManagerChrome` / `CompanionMenuRenderer`：窗口操作与托盘菜单。Win32 声明仍集中于 NativeMethods，关闭回托盘。
@@ -40,7 +40,7 @@
 
 ```powershell
 .\.tools\dotnet\dotnet.exe build tools/ManagerUiSmoke/ManagerUiSmoke.csproj -c Release -p:Platform=x64
-.\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe --visual-review --output artifacts/ui-simplify-20261103
+.\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe --visual-review --output artifacts/ui-balance-20261103
 .\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe --baseline
 .\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe
 .\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe --preview-pixels

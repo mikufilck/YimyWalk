@@ -410,7 +410,7 @@ internal static class Program
         }
         var required = name switch
         {
-            "Overview" => new[] { "总览", "桌宠：", "默认角色：", "数量" },
+            "Overview" => new[] { "欢迎回来！", "桌宠：", "默认角色：", "数量" },
             "Pets" => new[] { "桌宠" },
             "Characters" => new[] { "角色", "角色 ID：" },
             "Interactions" => new[] { "互动", "主动走动", "自动气泡总开关", "跳跃倾向 (%)" },

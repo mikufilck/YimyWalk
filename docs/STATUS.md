@@ -1,3 +1,19 @@
+# 2026-11-03 恢复简短欢迎语与可爱布局
+
+**基线与原因**：接续 `bbc754b`。用户纠正了上一轮过度精简：要减少啰嗦，不是删掉所有欢迎语或可爱设计。已更正 MAINTENANCE 与 UI_DESIGN 中过于绝对的文案规则。
+
+**① 代码已实现**：首页恢复一句“欢迎回来！”，粉色圆角欢迎区左侧放默认角色、实际计数与创建操作，右侧展示原始角色帧；下方白色圆角区整理常用操作。五页标题加入小狗爪，喂食 / 食物按钮恢复骨头图标，欢迎区增加细虚线边；侧栏使用“咿米的桌面”。功能说明继续简短，未恢复重复状态卡片和多段口号。全部为原生 UI 绘制和既有角色原帧，角色 PNG / Core / 设置字段未改，未调用 AI 绘画。
+
+**② 构建通过**：ManagerUiSmoke 构建 0 警告 / 0 错误。`scripts/build-yimywalk.ps1 -PublishPath artifacts/ui-balance-20261103/publish` 与 `scripts/test-release-package.ps1 -Path artifacts/ui-balance-20261103/publish` 实跑通过，`PACKAGE PASS VERSION=0.3.1 FILES=15 CHECKSUMS=14`。本地 ZIP：`artifacts/ui-balance-20261103/YimyWalk-0.3.1-ui-balanced-win-x64.zip`，SHA-256 `2B4F43B97C457114FEB1EFC34E5C639889A1100F6E9DFFF4BB8C4E5CD0B00AD7`。仍为 0.3.1 预览，正式 Release 与标签未改。
+
+**③ Core 测试通过**：`scripts/test-yimywalk.ps1` 与发布流程实跑 Core **187** / App **24**，0 失败、0 跳过。
+
+**④ Windows 桌面已验证（本次范围）**：单屏 2560×1600、144 DPI / 150%。`ManagerUiSmoke --visual-review --output artifacts/ui-balance-20261103` 检查五页默认客户区 1680×1140 / 最小窗口 1440×960、标题栏与托盘还原，均通过；已查看首页和互动页实图。完整 ManagerUiSmoke 验证数量创建、单只参数、重置、删除与保存失败提示 / 跳转 / 重试通过。独立 `scripts/desktop-input-smoke.ps1` 输出 `FRAME_REAL_DRAG_RESIZE=PASS`、`RESULT PASS`，真实鼠标拖动 / 缩放 / 关闭回托盘，以及开关、食物、拖拽、透明路由、焦点与退出通过。
+
+**Windows 桌面未验证**：多屏、真实跨屏 DPI、OS 缩放切换、拔插 / 睡眠与长时压力。没有用截图替代这些验收。
+
+产物在 `artifacts/ui-balance-20261103/`：五页 PNG、`build.log`、`tests.log`、`visual-review.log`、`full-ui.log`、`input-smoke.log`、`publish.log`、`package.log`。文档首页图已更新；旧预览目录仅作对照。按既有授权提交并正常推送 `codex/bootstrap`，不提交预览包或测试临时数据。
+
 # 2026-11-03 管理器文案与布局精简
 
 **基线与范围**：接续 `6374a17`。用户反馈文案刻意、卡片与小标题过多，要求使用自然或直接的功能描述。本轮保留粉白配色和实际操作，删除装饰文案与重复信息。当前约定见 [UI_DESIGN](UI_DESIGN.md)，更新后的首页见 [ui-overview.png](assets/ui-overview.png)。
