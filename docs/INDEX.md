@@ -3,7 +3,7 @@
 > **用途**：把「要改什么 → 去哪个文件 → 读哪份文档」压缩成一页，减少每次都全仓库搜索的成本。
 > **读法**：先读 [`AGENTS.md`](../AGENTS.md)（约束与命令），再用本页定位；具体行为以源码为准。
 > **维护约定**：新增/删除/改名 顶层目录、项目、枢纽文件、`scripts/*.ps1`、`tools/*` 时**必须同步本页**。
-> **最后核对**：2026-11-01，维护分支 `codex/bootstrap`、版本 0.1.14（审查起点 `7a0fb13`）；当前行为与四档验证见 [`MAINTENANCE.md`](MAINTENANCE.md)，本页只维护导航。
+> **最后核对**：2026-11-03，维护分支 `codex/bootstrap`、版本 0.3.1；当前行为与四档验证见 [`MAINTENANCE.md`](MAINTENANCE.md)，本页只维护导航。
 > **快速接手**：[当前维护记忆](MAINTENANCE.md) → [最新交接](STATUS.md) → [本轮问题处置](reviews/2026-11-01-remediation.md)。首次接手还需读取 [原始需求](PROJECT_SPEC.md)。
 
 按任务读取：[Core §3](#3-yimywalkcore-模块地图) · [App §4](#4-yimywalkapp-模块地图) · [测试 §5](#5-测试地图testsyimywalkcoretests) · [工具/脚本 §6](#6-工具与脚本入口) · [文档 §7](#7-文档地图) · [命令 §9](#9-常用命令) · [改动落点 §11](#11-改动落点-checklist)。不必每次加载全部模块表。
@@ -34,11 +34,11 @@ YimyWalk 是一个**离线运行的 Windows x64 桌面 2D 宠物引擎**。核�
 | `tools/` 下的 4 个 smoke 工具（`DesktopSmoke`、`DesktopDisplaySmoke`、`DesktopInputSmoke`、`ManagerUiSmoke`） | 桌面验收工具，**不在 .sln 里**，只由 `scripts/*.ps1` 构建 | 扩展桌面验收矩阵 |
 | `scripts/` | 可复现入口：环境检查、构建、测试、发布、角色校验、桌面 smoke | 加/改自动化步骤 |
 | `Start-YimyWalk.ps1` | 根目录及发布包可用的启动包装，调用 `run-yimywalk.ps1` | 改启动诊断或入口兼容性 |
-| `Characters/` | 随包初始角色（`slime`、`咿米_Yimy`、`咿米_Line`），每个只有 `sprite.png` | 换/加初始角色 |
+| `Characters/` | 随包初始角色（`slime`、`咿米_Yimy`、`咿米_Line`）；两套咿米含动画配置，PNG 为原素材 | 换/加初始角色 |
 | `examples/character-template/` | 作者模板（含 `character.json` + `dialogue.txt`） | 改角色格式文档的配套示例 |
 | `docs/` | 规格、架构、状态交接、测试入口、角色格式、上游审计、索引 | 见 [§7](#7-文档地图) |
 | `licenses/` + `THIRD_PARTY_NOTICES.md` | 第三方许可与署名 | 增删依赖时必须同步 |
-| `Directory.Build.props` | 统一版本号真源（默认 `0.1.14`，脚本从此读取，可显式 `-Version` 覆盖） | 改默认版本 |
+| `Directory.Build.props` | 统一版本号真源（默认 `0.3.1`，脚本从此读取，可显式 `-Version` 覆盖） | 改默认版本 |
 | `global.json` | 锁定 SDK `8.0.425`（`rollForward: latestPatch`） | 升级 SDK 时 |
 | `YimyWalk.sln` | 只含 Core / Core.Tests / App / App.Tests / CharacterValidator **5 个项目** | 新项目入解决方案 |
 | `.github/workflows/dotnet.yml` | CI：`codex/bootstrap` 的 push/PR 上 Ubuntu + Windows 矩阵；Ubuntu Core，Windows Core/App + smoke 编译 | 改 CI 范围（注意：CI **不跑** Windows 桌面 smoke） |
@@ -128,9 +128,12 @@ graph TD
 | `Windows/BubbleWindow.cs` | 咿米逐像素 Alpha 气泡窗口：整窗穿透 / 不激活，跟随宠物与 DPI，钳制到所在屏工作区 |
 | `Windows/FoodWindow.cs` | 20×20 无激活且整窗输入透明的食物窗口，金色圆点随消耗缩放 |
 | `Windows/NativeMethods.cs` | **唯一 Win32 P/Invoke 集中地** |
-| `UI/ManagerForm.cs` | 主菜单外壳：200 px 侧栏、5 页按需创建并缓存、可见时 200 ms 刷新；启动隐藏，普通关闭隐藏回托盘，显式退出由宿主处理 |
+| `UI/ManagerForm.cs` | 咿米小窝外壳：216 逻辑像素侧栏、自定义标题栏、5 页缓存、可见时 200 ms 刷新；普通关闭隐藏回托盘，最大化尊重工作区 |
 | `UI/ManagerPage.cs` | 页面基类 + 标题/卡片布局辅助（标题间距按字体实测高度计算） |
 | `UI/UiTheme.cs` | 颜色/字体/间距常量 + AntdUI 控件工厂 |
+| `UI/Controls/UiCard.cs` / `UiMotifs.cs` | 圆角纸面、荷叶边、狗爪 / 骨头与内置导航 SVG；布局 Padding 与绘制分开 |
+| `UI/Controls/CompanionArt.cs` / `ThemedListView.cs` | 既有角色原画装饰、自绘列表表头 / 选中行；资源由控件释放 |
+| `UI/Controls/SettingRows.cs` / `ManagerChrome.cs` / `CompanionMenuRenderer.cs` | 设置分组、自定义窗口操作与托盘菜单配色 |
 | `UI/TrayIconHost.cs` | `NotifyIcon` + 右键菜单（打开管理器 / 隐藏 / 显示 / 清空 / 退出） |
 | `UI/AppIcon.cs` | 读取嵌入资源 `yimywalk.ico`（EXE / 管理窗口 / 托盘图标三处一致） |
 | `UI/PetListProjection.cs` | 以 `Guid` 为主键的行模型与选中态投影 |
@@ -192,7 +195,7 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `tools/DesktopSmoke` | `<rounds 1–20> <role> [landing] [targeted]` | 真实创建/清空 1/10/50/100 窗口，输出 CPU_S/工作集/私有字节/托管堆/句柄/USER/GDI |
 | `tools/DesktopDisplaySmoke` | `<characterRoot> [--rounds 1–100] [--inventory]`；**<2 块扩展显示器 → `UNVERIFIED` + 退出码 2** | 多显示器/DPI 矩阵：每屏生成落地行走跳跃、透明穿透、实体命中、跨屏拖拽 |
 | `tools/DesktopInputSmoke` | 无参数 | 真实鼠标输入 + 主菜单/托盘生命周期 |
-| `tools/ManagerUiSmoke` | `[--baseline]` / `[--preview-pixels]` / `[--bubble-skin]` | 管理界面结构、像素与咿米气泡渲染 / 真机窗口回归 |
+| `tools/ManagerUiSmoke` | `[--baseline]` / `[--preview-pixels]` / `[--bubble-skin]` / `[--animation-audit]` / `[--visual-review]` | 管理器五页 / 最小窗口 / 标题栏、预览像素、气泡与动画分入口复核 |
 | `tools/GenerateTestCharacters.ps1` | `[-Root <dir>]` | 生成测试用 cat/slime 角色图 |
 
 `ManagerUiSmoke` 没有单独的 PowerShell 包装。先执行 `.tools/dotnet/dotnet.exe build tools/ManagerUiSmoke/ManagerUiSmoke.csproj -c Release -p:Platform=x64`，再在可见桌面执行 `.tools/dotnet/dotnet.exe tools/ManagerUiSmoke/bin/x64/Release/net8.0-windows/ManagerUiSmoke.dll --baseline`；不传参数运行完整模式，`--preview-pixels` 运行像素回归。
@@ -232,6 +235,7 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `docs/ARCHITECTURE.md` | 当前分层决策、真实类型和资源边界 | 决定代码该放哪一层时读 |
 | `docs/CHARACTER_FORMAT.md` | 角色包格式的**对外契约**（supported / planned 已区分） | 改角色格式或写文档时读 |
 | `docs/TESTING.md` | 验收入口与 Windows 桌面验收矩阵 | 决定"怎么算通过"时读 |
+| `docs/UI_DESIGN.md` / `docs/assets/ui-overview.png` | 咿米小窝的视觉方向、组件地图、实际首页与复核入口 | 改管理器、标题栏、菜单或设计样式时读 |
 | `docs/YIMY_VISUAL_STYLE.md` / `docs/artwork/yimy-bubble-prompt.txt` | 咿米主题、气泡原画来源 / hash / 提示词、切图与复核入口 | 改气泡外观或替换皮肤时读 |
 | `docs/UPSTREAM_AUDIT.md` | eSheep 上游审计结论（固定提交、许可、代码路径） | 需要复核上游时读；**在仓库外取源码** |
 | `docs/assets/*.png` | 可重复生成的预览/参考图 | 改角色格式文档配图 |
@@ -285,7 +289,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/desktop-display-smok
 
 必须区分：① 代码已实现 ② 构建通过 ③ Core 测试通过 ④ Windows 桌面已验证。构建、Core 测试、发布包自检、UI 截图均不能替代桌面验收；历史桌面结论只适用于原日期、代码和拓扑。
 
-CI 只覆盖 Ubuntu 上的 restore/build/test；App 的 `EnableWindowsTargeting` 允许跨平台编译，不表示 Windows 适配已执行。桌面工具设置隔离和独立 Harness 的边界见 [TESTING](TESTING.md#桌面工具的设置隔离边界)。
+CI 在 Ubuntu 运行 Core、Windows 运行 Core/App 并编译 smoke；均不执行真实桌面输入。App 的 `EnableWindowsTargeting` 允许跨平台编译，不表示 Windows 适配已执行。隔离边界见 [TESTING](TESTING.md#桌面工具的设置隔离边界)。
 
 ---
 

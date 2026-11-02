@@ -5,14 +5,14 @@ namespace YimyWalk.App.UI.Pages;
 
 internal sealed class CharactersPage : ManagerPage
 {
-    private readonly ListView _characters = new()
+    private readonly ListView _characters = new ThemedListView()
     {
         View = View.Details,
         FullRowSelect = true,
         HideSelection = false,
         MultiSelect = false,
         HeaderStyle = ColumnHeaderStyle.Nonclickable,
-        BorderStyle = BorderStyle.FixedSingle,
+        BorderStyle = BorderStyle.None,
         Dock = DockStyle.Fill,
         TabStop = true
     };
@@ -34,9 +34,10 @@ internal sealed class CharactersPage : ManagerPage
         _characters.Columns.Add("默认", 50);
 
         var layout = CreateRootLayout();
-        AddHeading(layout, "角色", "浏览角色包，设置新建桌宠的默认角色。");
+        layout.Dock = DockStyle.Fill; layout.AutoSize = false;
+        AddHeading(layout, "角色", "每一种模样，都值得好好珍藏。");
 
-        var content = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, MinimumSize = new Size(0, 430), ColumnCount = 2, RowCount = 1 };
+        var content = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, MinimumSize = new Size(0, 430), ColumnCount = 2, RowCount = 1 };
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58));
 
@@ -67,7 +68,7 @@ internal sealed class CharactersPage : ManagerPage
         actions.Controls.Add(_refresh);
         actions.Controls.Add(_setDefault);
         AddDetailRow(details, actions);
-        var previewRow = new Panel { Dock = DockStyle.Top, Height = 210, Padding = new Padding(0, UiTheme.Space8, 0, UiTheme.Space8) };
+        var previewRow = new Panel { Dock = DockStyle.Top, Height = 268, Padding = new Padding(0, UiTheme.Space8, 0, UiTheme.Space8) };
         previewRow.Controls.Add(_preview);
         AddDetailRow(details, previewRow);
         _roleName.Font = UiTheme.SectionFont;
@@ -79,6 +80,13 @@ internal sealed class CharactersPage : ManagerPage
         detailCard.Controls.Add(details);
         content.Controls.Add(detailCard, 1, 0);
         AddRow(layout, content);
+        content.Dock = DockStyle.Fill;
+        layout.RowStyles[layout.RowCount - 1] = new RowStyle(SizeType.Percent, 100);
+        _characters.SizeChanged += (_, _) =>
+        {
+            var widths = new[] { .34, .32, .17, .17 };
+            for (var i = 0; i < 4; i++) _characters.Columns[i].Width = Math.Max(48, (int)((_characters.ClientSize.Width - 6) * widths[i]));
+        };
 
         _characters.SelectedIndexChanged += (_, _) =>
         {
@@ -105,9 +113,11 @@ internal sealed class CharactersPage : ManagerPage
             try
             {
                 _characters.Items.Clear();
-                foreach (var definition in Host.Catalog.Definitions.Values.OrderBy(definition => definition.Id))
+                foreach (var definition in Host.Catalog.Definitions.Values
+                    .OrderByDescending(definition => definition.Id.Equals(current, StringComparison.OrdinalIgnoreCase))
+                    .ThenBy(definition => definition.Id, StringComparer.OrdinalIgnoreCase))
                 {
-                    var choice = new RoleChoice(definition.Id, definition.DisplayName);
+                    var choice = new RoleChoice(definition.Id, UiText.CharacterName(definition.DisplayName));
                     var row = new ListViewItem(choice.DisplayName) { Tag = choice };
                     row.SubItems.Add(choice.Id);
                     row.SubItems.Add("可用");
@@ -156,7 +166,7 @@ internal sealed class CharactersPage : ManagerPage
             return;
         }
 
-        _roleName.Text = definition.DisplayName;
+        _roleName.Text = UiText.CharacterName(definition.DisplayName);
         _roleId.Text = $"角色 ID：{definition.Id}";
         var isDefault = definition.Id.Equals(Host.SelectedRoleId, StringComparison.OrdinalIgnoreCase);
         _roleInfo.Text = $"{(isDefault ? "新建桌宠将使用此角色。" : "预览中，不会改变默认角色。")}{Environment.NewLine}走动速度 {definition.Movement.WalkSpeed:0.#} px/s。";

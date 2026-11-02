@@ -1,5 +1,6 @@
 using YimyWalk.App.Host;
 using YimyWalk.App.Settings;
+using YimyWalk.App.UI.Controls;
 using YimyWalk.Core.Display;
 
 namespace YimyWalk.App.UI.Pages;
@@ -17,116 +18,70 @@ internal sealed class SettingsPage : ManagerPage
     public SettingsPage(AppHost host) : base(host)
     {
         var layout = CreateRootLayout();
-        AddHeading(layout, "设置", "这里设置所有桌宠的默认值。");
-        var card = UiTheme.CreateCard();
-        card.Dock = DockStyle.Top;
-        card.Height = 264;
-        var cardTitle = new Label { Text = "显示与行为", AutoSize = true, Font = UiTheme.SectionFont, Dock = DockStyle.Top };
-        var grid = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, Padding = new Padding(0, UiTheme.Space12, 0, 0) };
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58));
-        AddGridRow(grid, "桌宠显示缩放", _scale, "0.1–8.0，修改后立即生效。");
-        AddGridRow(grid, "新桌宠出现的位置", _display, "选择桌宠出现的显示器。");
-        AddGridRow(grid, "允许落到可见窗口顶部", _landing, "桌宠会停在窗口上边缘并沿边行走。");
-        card.Controls.Add(grid);
-        card.Controls.Add(cardTitle);
-        AddRow(layout, card);
+        AddHeading(layout, "设置", "把小窝布置成，你最舒服的样子。");
+        var display = new SettingRows(320);
+        display.Add("桌宠显示缩放", "大一点抱抱，小一点陪伴。0.1–8.0，修改后立即生效。", _scale);
+        display.Add("新桌宠出现的位置", "挑一块屏幕，作为这次相遇的起点。", _display);
+        display.Add("允许落到可见窗口顶部", "让她停在窗口边缘，陪你一起看世界。", _landing);
+        AddRow(layout, display.InCard("她的桌面舞台"));
 
-        var saveCard = UiTheme.CreateCard();
-        saveCard.Dock = DockStyle.Top;
-        saveCard.Height = 142;
-        var saveTitle = new Label { Text = "保存状态", AutoSize = true, Font = UiTheme.SectionFont, Dock = DockStyle.Top };
-        _status.Dock = DockStyle.Top;
-        _diagnostic.Dock = DockStyle.Top;
-        _retry.Dock = DockStyle.Top;
-        _retry.Margin = new Padding(0, UiTheme.Space8, 0, 0);
+        var save = UiTheme.CreateCard(); save.SurfaceColor = UiTheme.BlueWash;
+        save.AutoSize = true; save.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        var rows = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 1, Margin = Padding.Empty };
+        rows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        rows.Controls.Add(UiTheme.SectionTitle("偏好会被好好记住"), 0, 0);
+        _status.Font = UiTheme.SectionFont;
+        rows.Controls.Add(_status, 0, 1); rows.Controls.Add(_diagnostic, 0, 2);
+        rows.Controls.Add(_retry, 0, 3);
+        rows.SizeChanged += (_, _) =>
+        {
+            var width = Math.Max(1, rows.ClientSize.Width - 8);
+            _status.MaximumSize = new Size(width, 0); _diagnostic.MaximumSize = new Size(width, 0);
+        };
+        save.Controls.Add(rows); AddRow(layout, save);
         _retry.Click += (_, _) => Host.RetrySettingsSave();
-        saveCard.Controls.Add(_retry);
-        saveCard.Controls.Add(_diagnostic);
-        saveCard.Controls.Add(_status);
-        saveCard.Controls.Add(saveTitle);
-        AddRow(layout, saveCard);
-
         _scale.ValueChanged += (_, _) => { if (!_syncing) Host.GlobalScale = (float)_scale.Value; };
         _display.SelectedIndexChanged += (_, _) =>
         {
-            if (_syncing || _display.SelectedValue is not DisplayChoice choice) return;
-            Host.SetPreferredDisplay(choice.Id);
+            if (!_syncing && _display.SelectedValue is DisplayChoice choice) Host.SetPreferredDisplay(choice.Id);
         };
         _landing.CheckedChanged += (_, _) => { if (!_syncing) Host.WindowLandingEnabled = _landing.Checked; };
     }
-
     public override string PageTitle => "设置";
-
     public override void RefreshFromHost()
     {
         _syncing = true;
         try
         {
-            _scale.Value = (decimal)Host.GlobalScale;
-            _landing.Checked = Host.WindowLandingEnabled;
+            _scale.Value = (decimal)Host.GlobalScale; _landing.Checked = Host.WindowLandingEnabled;
             RefreshDisplaysIfNeeded();
-            _status.Text = $"设置：{UiText.SaveStateLabel(Host.SettingsSaveState)}";
-            _retry.Enabled = Host.SettingsSaveState == SettingsSaveState.Failed;
-            _diagnostic.Text = Host.SettingsSaveError is { Length: > 0 } error
-                ? $"保存错误：{error}"
-                : Host.SettingsLoad.Diagnostic ?? string.Empty;
+            RefreshStatus($"设置：{UiText.SaveStateLabel(Host.SettingsSaveState)}");
+            var load = Host.SettingsLoad.Diagnostic;
+            var firstRun = load == "主设置文件：文件不存在；备份设置文件：文件不存在" || load == "设置文件不存在，已使用默认值";
+            _diagnostic.Text = Host.SettingsSaveError is { Length: > 0 } error ? $"保存错误：{error}"
+                : firstRun || string.IsNullOrWhiteSpace(load) ? "不用找保存按钮，修改后会自动记住。"
+                : Host.SettingsLoad.UsedBackup ? $"已从备份恢复设置。{load}" : load;
         }
         finally { _syncing = false; }
     }
-
     public void RefreshStatus(string status)
     {
         _status.Text = status;
-        _retry.Enabled = Host.SettingsSaveState == SettingsSaveState.Failed;
+        _retry.Enabled = _retry.Visible = Host.SettingsSaveState == SettingsSaveState.Failed;
     }
-
     private void RefreshDisplaysIfNeeded()
     {
-        var expected = new[] { (string?)null }.Concat(Host.Displays.Select(display => (string?)display.Id.Value)).ToArray();
-        var current = _display.Items.Cast<DisplayChoice>().Select(choice => choice.Id).ToArray();
-        if (expected.SequenceEqual(current, StringComparer.OrdinalIgnoreCase))
+        var expected = new[] { (string?)null }.Concat(Host.Displays.Select(d => (string?)d.Id.Value)).ToArray();
+        if (!expected.SequenceEqual(_display.Items.Cast<DisplayChoice>().Select(c => c.Id), StringComparer.OrdinalIgnoreCase))
         {
-            SelectDisplay();
-            return;
+            _display.Items.Clear(); _display.Items.Add(new DisplayChoice(null, "跟随系统"));
+            foreach (var display in Host.Displays)
+                _display.Items.Add(new DisplayChoice(display.Id.Value, $"{display.Id.Value} {(display.IsPrimary ? "（主显示器）" : "")}"));
         }
-
-        _display.Items.Clear();
-        _display.Items.Add(new DisplayChoice(null, "跟随系统"));
-        foreach (var display in Host.Displays)
-            _display.Items.Add(new DisplayChoice(display.Id.Value, DisplayLabel(display)));
-        SelectDisplay();
-    }
-
-    private void SelectDisplay()
-    {
-        var selected = Host.PreferredDisplayId;
-        for (var index = 0; index < _display.Items.Count; index++)
-            if (_display.Items[index] is DisplayChoice choice && string.Equals(choice.Id, selected, StringComparison.OrdinalIgnoreCase))
-            {
-                _display.SelectedIndex = index;
-                return;
-            }
+        for (var i = 0; i < _display.Items.Count; i++)
+            if (_display.Items[i] is DisplayChoice c && string.Equals(c.Id, Host.PreferredDisplayId, StringComparison.OrdinalIgnoreCase))
+            { _display.SelectedIndex = i; return; }
         if (_display.Items.Count > 0) _display.SelectedIndex = 0;
     }
-
-    private static void AddGridRow(TableLayoutPanel grid, string label, Control editor, string help)
-    {
-        var row = grid.RowCount++;
-        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        grid.Controls.Add(UiTheme.CreateBodyLabel(label), 0, row);
-        grid.Controls.Add(UiTheme.WrapSwitch(editor), 1, row);
-        var helpLabel = UiTheme.CreateMutedLabel(help);
-        grid.RowCount++;
-        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        grid.Controls.Add(helpLabel, 1, row + 1);
-    }
-
-    private static string DisplayLabel(DisplayInfo display)
-        => $"{display.Id.Value} {(display.IsPrimary ? "（主显示器）" : string.Empty)}";
-
-    private sealed record DisplayChoice(string? Id, string Label)
-    {
-        public override string ToString() => Label;
-    }
+    private sealed record DisplayChoice(string? Id, string Label) { public override string ToString() => Label; }
 }

@@ -4,6 +4,10 @@ YimyWalk 是一个面向 Windows x64 的离线桌面 2D 宠物引擎。它采用
 
 项目由个人业余开发，是一个非盈利、为爱发电的产品。欢迎下载、体验、学习、修改和提出新的想法。
 
+围绕咿米设计的「桌面小窝」使用粉白、莓灰和浅蓝色，搭配狗爪、骨头与荷叶边。角色原画保持不变。[界面设计与验证说明](docs/UI_DESIGN.md)。
+
+![咿米的桌面小窝](docs/assets/ui-overview.png)
+
 ## 主要功能
 
 - 内置 `slime`、`咿米_Yimy` 和 `咿米_Line` 三个初始角色；角色资源与引擎逻辑分离。
@@ -19,7 +23,7 @@ YimyWalk 是一个面向 Windows x64 的离线桌面 2D 宠物引擎。它采用
 
 优先从 GitHub 仓库的 [Releases](https://github.com/Data-Echo/YimyWalk/releases) 下载 Windows x64 便携包。发布包是 self-contained 单文件应用，通常不需要另行安装 .NET 运行时。如果 Releases 暂时还没有对应版本，可以按下方步骤从源码构建。
 
-解压后双击 `YimyWalk.exe` 即可启动。当前从托盘打开主菜单并创建桌宠；启动不会自动显示管理窗口或创建实例，普通关闭主菜单会隐藏回托盘。角色目录应与程序放在同一发布目录中：
+解压后双击 `YimyWalk.exe` 即可启动。当前会自动创建一只默认角色，管理器从托盘打开；普通关闭管理器会隐藏回托盘。角色目录应与程序放在同一发布目录中：
 
 ```text
 YimyWalk.exe

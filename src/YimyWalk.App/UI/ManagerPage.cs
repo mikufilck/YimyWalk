@@ -19,7 +19,8 @@ internal abstract class ManagerPage : UserControl
         UiTheme.StylePage(this);
         Dock = DockStyle.Fill;
         AutoScroll = true;
-        Padding = new Padding(UiTheme.Space24);
+        Padding = new Padding(28, 24, 28, 24);
+        SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
         TabStop = true;
     }
 
@@ -36,6 +37,7 @@ internal abstract class ManagerPage : UserControl
         {
             Dock = DockStyle.Top,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 1,
             RowCount = 0,
             Padding = Padding.Empty,
@@ -52,7 +54,7 @@ internal abstract class ManagerPage : UserControl
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, UiTheme.Space24),
+            Margin = new Padding(0, 0, 0, 20),
             MinimumSize = new Size(0, 76)
         };
         var titleLabel = new Label
@@ -60,6 +62,7 @@ internal abstract class ManagerPage : UserControl
             Text = title,
             AutoSize = true,
             Font = UiTheme.TitleFont,
+            BackColor = Color.Transparent,
             ForeColor = UiTheme.Ink,
             Location = new Point(0, 0)
         };
@@ -69,6 +72,7 @@ internal abstract class ManagerPage : UserControl
             AutoSize = true,
             MaximumSize = new Size(760, 0),
             Font = UiTheme.BodyFont,
+            BackColor = Color.Transparent,
             ForeColor = UiTheme.Muted,
             Location = new Point(2, 0)
         };

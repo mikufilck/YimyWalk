@@ -1,3 +1,21 @@
+# 2026-11-03 咿米小窝 UI 重做与预览包
+
+**基线与范围**：接续 `491aebc` 与昨天的 0.3.1 收尾，不回滚默认角色 / 启动生成 / 待机与行走节奏。用户要求优先美观、可爱和角色风格，并补充狗爪、骨头等参考元素。本轮重做 App 管理器与托盘 UI；未调用绘画工具，未改角色 PNG、图标源文件、动画、Core 或设置 schema。设计与组件入口见 [UI_DESIGN](UI_DESIGN.md)，首页实际渲染图见 [ui-overview.png](assets/ui-overview.png)。
+
+**① 代码已实现**：粉白 / 莓灰 / 浅蓝主题、代码内狗爪 / 骨头 / 荷叶边、既有原画欢迎区、三项真实状态、快捷操作、柔和列表与大预览、互动双栏分组与保存状态。自定义标题栏保留拖动、缩放、最小化 / 最大化 / 还原和关闭回托盘；Win32 声明仍集中在 NativeMethods。页面缓存 / 200 ms 可见刷新保留，图库默认角色置顶，显示名更友好而 ID 不变。原生 Padding 与按内容收缩布局修正旧卡片边距和窗口变宽后残留的空白；AntdUI 按钮的绘制内缩与实际点击区保持一致。原画和原图标只复用，没有 AI 角色素材或新第三方依赖。
+
+**② 构建通过**：解决方案、ManagerUiSmoke、DesktopInputSmoke 的最终构建为 0 警告 / 0 错误。`build-yimywalk.ps1 -PublishPath artifacts/ui-redesign-20261103/publish` 与 `test-release-package.ps1` 实跑通过：`PACKAGE PASS VERSION=0.3.1 FILES=15 CHECKSUMS=14`。版本保持 0.3.1，仅生成本地 UI 预览包，未改正式 tag / Release 或既有附件。ZIP：`artifacts/ui-redesign-20261103/YimyWalk-0.3.1-ui-preview-win-x64.zip`；SHA-256 `1D0DBBA1E5B285B7A1B25279496CBA9F1D3919741FCE75035CC4483CBB9B0DEF`。
+
+**③ Core 测试通过**：`scripts/test-yimywalk.ps1` 与发布流程实跑 **Core 187 / App 24，通过，0 失败、0 跳过**。既有角色 hash 和架构约束仍通过；本轮没有为纯配色写镜像测试。
+
+**④ Windows 桌面已验证（本次范围）**：当前单屏 2560×1600，工作区 2560×1528，144 DPI / 150%。`ManagerUiSmoke --baseline`、完整模式、`--preview-pixels`、`--visual-review` 通过；五页默认客户区 1680×1140 与最小窗口 1440×960 的文字、布局和操作组件检查通过；自定义标题栏最大化不盖任务栏，最小化 / 还原 / 关闭回托盘与边缘命中通过。`desktop-input-smoke.ps1` 最终 `RESULT PASS`，新增真实鼠标标题栏拖动 / 右下角缩放 / 关闭按钮验收（`FRAME_REAL_DRAG_RESIZE=PASS`）；角色选择与刷新、开关、喂食 / 食物、宠物透明 / 实体路由、拖拽、跨进程气泡 / 食物穿透与焦点、托盘、清空和退出均通过。
+
+验证过程中发现既有 smoke 仍引用旧“运行级限制”等文案、旧托盘项和“生成虚拟食物”，并遗漏昨天 `StartWalking` 新增的可选时长参数；已将断言 / 反射调用同步到实际接口，未改产品动作来迎合脚本。完整 UI 模式另检查混合角色的单只参数、实时刷新与删除后的选择保持。
+
+**Windows 桌面未验证**：真实双屏 / 跨屏 DPI、系统缩放切换、拔插、睡眠和长期压力。四档预览像素计算不是 OS DPI 验收；应用自身 DrawToBitmap 的五页效果图也不代替上述独立真实输入验收。
+
+证据与预览位于 `artifacts/ui-redesign-20261103/`：`build.log`、`tests.log`、`layout.log`、`full-ui.log`、`pixels.log`、`visual-review.log`、`input-smoke.log`、`publish.log`、`package.log` 与五页 PNG。测试使用临时角色 / 设置目录，真实创建两只咿米后取计数，退出清理；无用户桌面截图、真实设置写入或原画改绘。源码与文档按已有授权提交维护分支，发布产物与临时日志不进入 Git。
+
 # 2026-11-02 行为默认区间调整：待机 5–35 秒、行走 3–20 秒
 
 **变更**：

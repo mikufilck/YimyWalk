@@ -59,7 +59,11 @@ try
         Require(navigationLabels.Contains(label), $"manager contains {label}");
     Require(Property(shellManager, "SelectedPage").ToString() == "Overview", "manager starts on overview");
     Invoke(hostType, host, "ShowManager");
-    shellManager.Close();
+    VerifyManagerFrameInput(shellManager);
+    var captionClose = Descendants(shellManager).OfType<Button>().Single(button => button.Name == "收起到托盘");
+    var captionClosePoint = captionClose.PointToScreen(new Point(captionClose.Width / 2, captionClose.Height / 2));
+    Native.SetCursorPos(captionClosePoint.X, captionClosePoint.Y);
+    Native.MouseClick();
     Pump(50);
     Require(!shellManager.Visible && !shellManager.IsDisposed, "manager close hides to tray and keeps host alive");
     Invoke(hostType, host, "ShowManager");
@@ -149,7 +153,7 @@ try
     var floorY = Foot(instance).Y;
     Console.WriteLine($"MOTION FALL_START_Y={initialY:0.0} FLOOR_Y={floorY:0.0} STATE={State(instance)}");
 
-    Invoke(instance.GetType(), instance, "StartWalking", Enum.Parse(Property(instance, "Facing").GetType(), "Right"));
+    Invoke(instance.GetType(), instance, "StartWalking", Enum.Parse(Property(instance, "Facing").GetType(), "Right"), 0f);
     var walkStartX = Foot(instance).X;
     WaitUntil(() => Math.Abs(Foot(instance).X - walkStartX) > 2, 1500, "walk-motion");
     Console.WriteLine($"MOTION WALK_DELTA_X={Foot(instance).X - walkStartX:0.0} STATE={State(instance)}");
@@ -279,7 +283,7 @@ try
     Console.WriteLine("LIFECYCLE HIDE_SHOW=PASS CLEAR=PASS");
 
     var manager = (Form)PrivateField(host, "_manager");
-    ClickTrayMenuItem((NotifyIcon)icon, "打开主菜单");
+    ClickTrayMenuItem((NotifyIcon)icon, "打开管理器");
     Require(manager.Visible, "tray menu opens manager");
     Invoke(manager.GetType(), manager, "SelectPage", Enum.Parse(pageType, "Characters"));
     var refreshButton = ButtonControls(manager).SingleOrDefault(button => button.Text == "刷新角色");
@@ -340,7 +344,7 @@ try
     Invoke(manager.GetType(), manager, "SelectPage", Enum.Parse(pageType, "Overview"));
     var feedButton = ButtonControls(manager).SingleOrDefault(button => button.Text == "喂食全部");
     Require(feedButton is not null, "manager exposes feed-all entry");
-    var foodButton = ButtonControls(manager).SingleOrDefault(button => button.Text == "生成虚拟食物");
+    var foodButton = ButtonControls(manager).SingleOrDefault(button => button.Text == "投放食物");
     Require(foodButton is not null, "manager exposes virtual food entry");
     ((IButtonControl)foodButton!).PerformClick();
     Pump(50);
@@ -413,11 +417,11 @@ try
     Pump(100);
     var menuPet = First(Property(windowsRegistry, "Windows"));
     var menuPetForm = (Form)menuPet;
-    ClickTrayMenuItem((NotifyIcon)icon, "隐藏宠物");
+    ClickTrayMenuItem((NotifyIcon)icon, "隐藏桌宠");
     Require(!menuPetForm.Visible, "tray menu hides pets");
-    ClickTrayMenuItem((NotifyIcon)icon, "显示宠物");
+    ClickTrayMenuItem((NotifyIcon)icon, "显示桌宠");
     Require(menuPetForm.Visible, "tray menu shows pets");
-    ClickTrayMenuItem((NotifyIcon)icon, "清空宠物");
+    ClickTrayMenuItem((NotifyIcon)icon, "清空桌宠");
     Pump(250);
     Console.WriteLine($"TRAY CLEAR DIAG ACTIVE={Property(session, "ActiveCount")} PENDING={Property(Property(host, "Batch"), "PendingCount")} WINDOWS={Property(windowsRegistry, "Count")}");
     Require((int)Property(session, "ActiveCount") == 0, "tray menu clears pets");
@@ -576,7 +580,7 @@ static void VerifyPassiveWindowsAcrossProcesses(Assembly app, string sandbox)
     var eventName = "Local\\YimyWalkPassive-" + Guid.NewGuid().ToString("N");
     using var clicked = new EventWaitHandle(false, EventResetMode.AutoReset, eventName);
     var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
-    if (Path.GetFileNameWithoutExtension(Environment.ProcessPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+    if (string.Equals(Path.GetFileNameWithoutExtension(Environment.ProcessPath), "dotnet", StringComparison.OrdinalIgnoreCase))
         start.ArgumentList.Add(typeof(Program).Assembly.Location);
     start.ArgumentList.Add("--passive-probe"); start.ArgumentList.Add(ready); start.ArgumentList.Add(eventName);
     using var child = Process.Start(start)!;
@@ -611,6 +615,45 @@ static void VerifyPassiveWindowsAcrossProcesses(Assembly app, string sandbox)
         File.WriteAllText(ready + ".stop", "stop");
         if (!child.WaitForExit(3000)) { child.Kill(); child.WaitForExit(); }
     }
+}
+
+static void VerifyManagerFrameInput(Form manager)
+{
+    var savedBounds = manager.Bounds;
+    try
+    {
+        void Drag(Point start, Point end)
+        {
+            // Native caption/resize handling enters a modal move loop on the
+            // UI thread. Send real pointer input from a helper so release is
+            // guaranteed even while Application.DoEvents is inside that loop.
+            var input = Task.Run(() =>
+            {
+                Native.SetCursorPos(start.X, start.Y);
+                Native.MouseDown();
+                try
+                {
+                    Thread.Sleep(100);
+                    Native.SetCursorPos(end.X, end.Y);
+                    Native.MouseMove();
+                    Thread.Sleep(100);
+                }
+                finally { Native.MouseUp(); }
+            });
+            while (!input.IsCompleted) Pump(15);
+            input.GetAwaiter().GetResult(); Pump(60);
+        }
+        var caption = Descendants(manager).Single(c => c.GetType().Name == "ManagerChrome");
+        var captionPoint = caption.PointToScreen(new Point(120, caption.Height / 2));
+        Drag(captionPoint, new Point(captionPoint.X + 60, captionPoint.Y + 25));
+        Require(manager.Location != savedBounds.Location, "real title-bar drag moves manager");
+        manager.Bounds = savedBounds; Pump(40);
+        var edge = new Point(manager.Right - 2, manager.Bottom - 2);
+        Drag(edge, new Point(edge.X - 60, edge.Y - 40));
+        Require(manager.Width < savedBounds.Width && manager.Height < savedBounds.Height, "real corner drag resizes manager");
+        Console.WriteLine("MANAGER FRAME_REAL_DRAG_RESIZE=PASS");
+    }
+    finally { Native.MouseUp(); manager.Bounds = savedBounds; }
 }
 
 static void ClickTrayMenuItem(NotifyIcon icon, string text)

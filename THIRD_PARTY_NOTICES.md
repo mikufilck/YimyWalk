@@ -29,6 +29,8 @@ The upstream README credits NAudio and several sprite authors. The historical au
 
 ## Yimy speech-bubble artwork
 
+The 2026-11-03 manager UI refresh reuses the existing project `Resources/icon_yimy.png`, `logo.png`, and character sprite frames without changing their source files. UI paw, bone, navigation and frill ornaments are code-native geometry. No reference-sheet bitmap, new third-party media, AI-generated character artwork or additional package dependency is introduced by this refresh.
+
 - `src/YimyWalk.App/Resources/Dialogue/yimy-bubble.png` is original project UI artwork generated with the built-in OpenAI image generation tool on 2026-11-01 under the project owner's explicit authorization.
 - The owner's reference screenshot supplied the broad bubble silhouette; the new image is not a crop or reproduction of that screenshot. Existing owner-supplied Yimy sprites supplied visual context and were not modified.
 - Public character facts and the blush representative color were consulted through the Moegirl entry and its readable mirror. No encyclopedia image, article text, third-party sprite or font file is bundled for this change. Runtime text uses an installed Windows font.

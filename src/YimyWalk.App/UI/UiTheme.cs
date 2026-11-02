@@ -1,3 +1,5 @@
+using YimyWalk.App.UI.Controls;
+
 namespace YimyWalk.App.UI;
 
 internal static class UiTheme
@@ -6,27 +8,32 @@ internal static class UiTheme
     public const int Space12 = 12;
     public const int Space16 = 16;
     public const int Space24 = 24;
-    public const int SidebarWidth = 200;
+    public const int SidebarWidth = 216;
 
-    public static readonly Color Ink = Color.FromArgb(32, 37, 52);
-    public static readonly Color Cream = Color.FromArgb(246, 247, 251);
-    public static readonly Color Sidebar = Color.FromArgb(255, 244, 214);
+    public static readonly Color Ink = Color.FromArgb(91, 65, 81);
+    public static readonly Color Cream = Color.FromArgb(255, 249, 251);
+    public static readonly Color Sidebar = Color.FromArgb(255, 237, 244);
     public static readonly Color Yellow = Sidebar;
-    public static readonly Color Coral = Color.FromArgb(255, 224, 213);
-    public static readonly Color Teal = Color.FromArgb(19, 124, 116);
-    public static readonly Color Muted = Color.FromArgb(89, 101, 121);
+    public static readonly Color Coral = Color.FromArgb(249, 212, 227);
+    public static readonly Color Teal = Color.FromArgb(190, 88, 129);
+    public static readonly Color Muted = Color.FromArgb(139, 113, 129);
     public static readonly Color Panel = Color.White;
-    public static readonly Color Border = Color.FromArgb(228, 232, 239);
-    public static readonly Color NavInk = Color.FromArgb(142, 60, 40);
+    public static readonly Color Border = Color.FromArgb(239, 218, 229);
+    public static readonly Color NavInk = Color.FromArgb(148, 59, 97);
+    public static readonly Color Blue = Color.FromArgb(115, 153, 186);
+    public static readonly Color BlueWash = Color.FromArgb(238, 246, 253);
+    public static readonly Color Gold = Color.FromArgb(196, 159, 97);
+    public static readonly Color Preview = Color.FromArgb(255, 245, 249);
 
     private static readonly string UiFont = FontFamily.Families.Any(f => f.Name.Equals("Microsoft YaHei UI", StringComparison.OrdinalIgnoreCase))
         ? "Microsoft YaHei UI" : "Segoe UI";
-    public static Font TitleFont => new(UiFont, 22f, FontStyle.Bold);
-    public static Font BrandFont => new(UiFont, 16f, FontStyle.Bold);
-    public static Font SectionFont => new(UiFont, 14f, FontStyle.Bold);
-    public static Font BodyFont => new(UiFont, 10f, FontStyle.Regular);
-    public static Font SmallFont => new(UiFont, 9f, FontStyle.Regular);
-    public static Font NavFont => new(UiFont, 10f, FontStyle.Bold);
+    public static Font TitleFont { get; } = new(UiFont, 23f, FontStyle.Bold);
+    public static Font BrandFont { get; } = new("Segoe UI", 21f, FontStyle.Bold);
+    public static Font SectionFont { get; } = new(UiFont, 12f, FontStyle.Bold);
+    public static Font BodyFont { get; } = new(UiFont, 9.5f, FontStyle.Regular);
+    public static Font SmallFont { get; } = new(UiFont, 8.5f, FontStyle.Regular);
+    public static Font NavFont { get; } = new(UiFont, 10f, FontStyle.Bold);
+    public static Font NumberFont { get; } = new("Segoe UI", 25f, FontStyle.Bold);
 
     public static void ConfigureAntd()
     {
@@ -39,16 +46,20 @@ internal static class UiTheme
         => new()
         {
             Text = text,
-            AutoSize = true,
-            AutoSizeMode = AntdUI.TAutoSize.Auto,
+            AutoSize = false,
+            Width = Math.Max(primary ? 172 : 112, TextRenderer.MeasureText(text, BodyFont).Width + 54),
+            Height = 48,
             Type = primary ? AntdUI.TTypeMini.Primary : AntdUI.TTypeMini.Default,
             DefaultBack = primary ? Teal : Color.White,
             DefaultBorderColor = primary ? Teal : Border,
-            ForeColor = Ink,
+            BorderWidth = primary ? 0 : 1,
+            MinimumSize = new Size(primary ? 152 : 112, 44),
+            WaveSize = 0,
+            ForeColor = primary ? Color.White : Ink,
             Font = BodyFont,
-            Padding = new Padding(12, 8, 12, 8),
-            Radius = 8,
-            Margin = new Padding(4),
+            Padding = Padding.Empty,
+            Radius = 14,
+            Margin = new Padding(0, 0, 10, 10),
             TabStop = true
         };
 
@@ -58,15 +69,16 @@ internal static class UiTheme
             Text = text,
             TextAlign = ContentAlignment.MiddleLeft,
             AutoSize = false,
-            Height = 44,
+            Height = 48,
+            WaveSize = 0,
             Dock = DockStyle.Top,
             Type = AntdUI.TTypeMini.Default,
             DefaultBack = Sidebar,
             DefaultBorderColor = Color.Transparent,
             ForeColor = Ink,
             Font = NavFont,
-            Padding = new Padding(Space16, 0, Space8, 0),
-            Radius = 8,
+            Padding = Padding.Empty,
+            Radius = 16,
             Margin = Padding.Empty,
             TabStop = true
         };
@@ -76,6 +88,7 @@ internal static class UiTheme
         {
             Text = text,
             AutoSize = true,
+            BackColor = Color.Transparent,
             Font = BodyFont,
             ForeColor = Ink,
             Margin = new Padding(0, 3, 8, 3)
@@ -86,20 +99,18 @@ internal static class UiTheme
         {
             Text = text,
             AutoSize = true,
+            BackColor = Color.Transparent,
             Font = SmallFont,
             ForeColor = Muted,
             Margin = new Padding(0, 3, Space8, 3)
         };
 
-    public static AntdUI.Panel CreateCard()
+    public static UiCard CreateCard()
         => new()
         {
-            BackColor = Panel,
-            BorderColor = Border,
-            BorderWidth = 1,
-            Radius = 12,
-            InnerPadding = new Padding(20),
-            Margin = new Padding(0, 0, 16, 16)
+            SurfaceColor = Panel,
+            Padding = new Padding(22),
+            Margin = new Padding(0, 0, 0, 16)
         };
 
     public static AntdUI.Switch CreateSwitch(bool isChecked = false)
@@ -107,10 +118,10 @@ internal static class UiTheme
         {
             Checked = isChecked,
             AutoSize = false,
-            Size = new Size(72, 28),
+            Size = new Size(50, 28),
             Fill = Teal,
-            CheckedText = "开",
-            UnCheckedText = "关",
+            CheckedText = "",
+            UnCheckedText = "",
             ForeColor = Color.White,
             Font = SmallFont,
             TabStop = true,
@@ -121,9 +132,12 @@ internal static class UiTheme
         => new()
         {
             Width = width,
-            Height = 36,
+            Height = 40,
+            WaveSize = 0,
+            Font = BodyFont,
+            ForeColor = Ink,
             DropDownArrow = true,
-            Radius = 8,
+            Radius = 12,
             TabStop = true,
             Margin = new Padding(4, 2, 0, 2)
         };
@@ -136,9 +150,12 @@ internal static class UiTheme
             Increment = increment,
             DecimalPlaces = decimals,
             Width = width,
-            Height = 36,
+            Height = 40,
+            WaveSize = 0,
+            Font = BodyFont,
+            ForeColor = Ink,
             AlwaysShowControl = true,
-            Radius = 8,
+            Radius = 12,
             TabStop = true,
             Margin = new Padding(4, 2, 0, 2)
         };
@@ -152,6 +169,7 @@ internal static class UiTheme
         var row = new FlowLayoutPanel
         {
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             WrapContents = false,
             Margin = Padding.Empty,
             Padding = Padding.Empty
@@ -167,4 +185,10 @@ internal static class UiTheme
         page.ForeColor = Ink;
         page.Font = BodyFont;
     }
+
+    public static Label SectionTitle(string text) => new()
+    {
+        Text = text, AutoSize = true, Font = SectionFont, ForeColor = Ink,
+        BackColor = Color.Transparent, Margin = new Padding(0, 0, 0, 14)
+    };
 }

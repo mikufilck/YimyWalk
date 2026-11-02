@@ -1,12 +1,14 @@
 # YimyWalk 当前维护记忆
 
-> 最近核对：2026-11-02；维护分支 `codex/bootstrap`，当前版本 **0.3.1**。实际提交与同步状态以 `git log -1`、`git status` 和远端分支为准。验证证据见 [STATUS](STATUS.md)，代码定位见 [INDEX](INDEX.md)，R01–R13 处置见 [修复记录](reviews/2026-11-01-remediation.md)。
+> 最近核对：2026-11-03；维护分支 `codex/bootstrap`，当前版本 **0.3.1**。实际提交与同步状态以 `git log -1`、`git status` 和远端分支为准。验证证据见 [STATUS](STATUS.md)，代码定位见 [INDEX](INDEX.md)，R01–R13 处置见 [修复记录](reviews/2026-11-01-remediation.md)。
 
 ## 项目与维护方向
 
 离线 Windows x64 桌宠引擎，.NET 8 + WinForms + AntdUI。保留 Core/App 分层、单宿主与每实例一个分层窗口。本轮审查登记 R01–R13 均已实现修正并执行针对性检查；具体证据与未覆盖边界保留在修复记录，不能推广为所有 Windows 环境通过。
 
 用户确认主要角色为 **Yimy（咿米），粉色头发的人形犬娘**。视觉优先对齐用户说明与现有咿米角色图；当前统一气泡已改为原创粉白犬耳 / 肉垫 / 蝴蝶结 / 金铃铛皮肤。[视觉依据、原画与提示词](YIMY_VISUAL_STYLE.md)是这部分的维护入口。
+
+管理器已重做为粉白 / 莓灰 / 浅蓝的「咿米的桌面小窝」，参考狗爪、骨头、荷叶边等元素；五页、标题栏与托盘菜单统一。角色原画 / 动作遵守作者手绘要求，本轮仅复用既有 PNG，未调用 AI 绘画。界面维护从 [UI_DESIGN](UI_DESIGN.md) 进入，实际首页见 `docs/assets/ui-overview.png`。
 
 M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、勿扰、实例重启恢复、社交等需求差距见 [原审查 §4](reviews/2026-11-01-project-review.md#4-需求覆盖与真实缺口)，不把缺陷修复等同于所有扩展已经实现。
 
@@ -27,6 +29,7 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 | PNG 与角色 | Core 的 PngImage 只开放受限 PNG，采用 StbImageNext 1.0.0；ImageSharp 已从依赖图移除。三套随包角色仍为 1254×1254 / 单格 418×418，素材未改；cat 只作测试 fixture |
 | 版本与构建 | 版本真源 Directory.Build.props = 0.3.1；构建、publish 与验包脚本从同一文件读取默认值。.sln 为 Core / App / Core.Tests / App.Tests / CharacterValidator 五个项目 |
 | 界面文案 | 用户可见文字集中在 `UI/Pages/*.cs` 与 `UI/TrayIconHost.cs`；枚举转中文经 `UI/UiText.cs`。新增文案保持「桌宠 / 设置 / 默认值」口径，不再引入“实例”“运行级限制”等实现术语 |
+| 管理器样式 | UiTheme 统一主题；UiCard 使用原生 Padding，SettingRows 按内容排版；ThemedListView 保留列表语义；CompanionArt 复用既有图标。ManagerChrome 提供拖动 / 最小化 / 最大化 / 还原 / 回托盘，Win32 声明仍仅在 NativeMethods |
 | 测试隔离 | 完整宿主 smoke 均从构造函数注入临时设置目录，日志也随之隔离；ManagerUiSmoke 不再反射替换已构造的 store。Windows App 测试有独立项目，CI 在 Ubuntu 跑 Core、Windows 跑 Core + App 并编译 smoke，不执行桌面验收 |
 
 ## 当前验证摘要
@@ -35,16 +38,16 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 
 | 档位 | 结果 |
 | --- | --- |
-| ① 代码已实现 | R01–R13 修正与咿米气泡皮肤 / 透明窗口接线；原始需求与历史设计不改 |
-| ② 构建通过 | 本地 SDK 8.0.426；本次 Release 构建 0 警告 / 0 错误；0.3.1 自包含发布与验包通过 |
-| ③ Core 测试通过 | 本次 Core 187 / App 24 均通过，0 失败、0 跳过；含行走/待机节奏与食物寿命回归 |
-| ④ Windows 桌面 | 单屏 2560×1600、144 DPI / 150%：气泡透明角/正文/边界/不抢焦点/跨进程点击穿透、完整 input smoke，以及动画审计（两角色行走序列 3,4,5,4,3、CHARGE=6/JUMP=6,7,8/LAND=0/EAT=0、FOOT_CLIP=NONE）均有记录。以上为 2026-11-01 既有记录；多屏、负坐标、拔插、睡眠唤醒与长期压力仍未验证 |
+| ① 代码已实现 | 管理器五页、标题栏、菜单与主题重做；Core / 角色 PNG / 动画 / 设置 schema 未改 |
+| ② 构建通过 | 本地 SDK 8.0.426；本次构建 0 警告 / 0 错误，0.3.1 UI 自包含预览包与验包通过（15 个文件 / 14 条校验）；正式 Release 未覆盖 |
+| ③ Core 测试通过 | 本次 Core 187 / App 24 均通过，0 失败、0 跳过 |
+| ④ Windows 桌面 | 本次单屏 2560×1600、144 DPI / 150%：新标题栏真实鼠标拖动 / 角落缩放 / 关闭回托盘，最大化 / 最小化 / 还原与完整 input smoke 通过；默认 1680×1140 / 最小 1440×960 五页检查通过。多屏 / OS DPI 切换 / 长期压力本次未验证；旧动画审计只保留原日期范围 |
 
 **Windows 桌面未验证**：至少两块扩展显示器的矩阵、真实负坐标布局、物理拔插、睡眠唤醒、完整 OS DPI 组合和长时间资源趋势。UI 渲染的 96/120/144/192 DPI 像素计算不是操作系统 DPI 切换验收。短测试清空的 GDI 回落不等同于长期无泄漏。
 
 ## 下一次工作的入口
 
-咿米气泡与逐角色动画播放配置已实现并验证上述当前单屏范围，接收用户后续扩展要求；涉及风格先查 [视觉说明](YIMY_VISUAL_STYLE.md)。不要按历史评审重复修复已经关闭的 R01–R13。硬件相关验收在具备对应条件时继续记录，不能用模拟显示器或文档把 UNVERIFIED 改成 PASS。
+本轮 UI 预览包位于 `artifacts/ui-redesign-20261103/`，版本仍为 0.3.1，未新建正式 tag / Release。后续界面反馈先查 [UI_DESIGN](UI_DESIGN.md)，角色 / 气泡风格查 [视觉说明](YIMY_VISUAL_STYLE.md)；不要回滚昨天的默认角色、启动生成、行为节奏修正。硬件验收具备条件时继续记录，不能用效果图或文档把 UNVERIFIED 改成 PASS。
 
 保留 HardLimit 公开 API 与 WarningLimit 设置字段的兼容性；它们未在生产启用，不自动构成获准删除的理由。后续结构拆分由实际改动需要决定，不照抄旧评审的拆类数量目标。
 

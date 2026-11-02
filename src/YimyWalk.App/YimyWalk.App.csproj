@@ -14,6 +14,7 @@
     <PackageReference Include="AntdUI" Version="2.4.12" />
     <EmbeddedResource Include="Resources\yimywalk.ico" LogicalName="YimyWalk.App.Resources.yimywalk.ico" />
     <EmbeddedResource Include="Resources\logo.png" LogicalName="YimyWalk.App.Resources.logo.png" />
+    <EmbeddedResource Include="Resources\icon_yimy.png" LogicalName="YimyWalk.App.Resources.icon_yimy.png" />
     <EmbeddedResource Include="Resources\Dialogue\yimy-bubble.png" LogicalName="YimyWalk.App.Resources.Dialogue.yimy-bubble.png" />
     <ProjectReference Include="..\YimyWalk.Core\YimyWalk.Core.csproj" />
     <InternalsVisibleTo Include="DesktopDisplaySmoke" />

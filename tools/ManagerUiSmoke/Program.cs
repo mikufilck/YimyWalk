@@ -34,7 +34,12 @@ internal static class Program
         var characterTemp = Path.Combine(Path.GetTempPath(), "YimyWalk-manager-characters-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(characterTemp);
         CopyCharacterFixture("slime", characterTemp);
-        CopyCharacterFixture("cat", characterTemp);
+        if (!args.Contains("--visual-review")) CopyCharacterFixture("cat", characterTemp);
+        if (args.Contains("--visual-review"))
+        {
+            CopyCharacterFixture("咿米_Yimy", characterTemp);
+            CopyCharacterFixture("咿米_Line", characterTemp);
+        }
         SetProp(host, "CharacterRootOverride", characterTemp);
         // Isolate all saves from the user's settings, including failure cases.
         try
@@ -44,6 +49,43 @@ internal static class Program
             Require(!manager.Visible, "manager starts hidden from tray");
             Call(host, "ShowManager");
             Pump(100);
+            if (args.Contains("--visual-review"))
+            {
+                Call(host, "CreateMany", "咿米_Yimy", 2);
+                Pump(1800);
+                Call(host, "PausePets");
+                Pump(80);
+                Console.WriteLine($"VISUAL_REVIEW DPI={manager.DeviceDpi} CLIENT={manager.ClientSize} SCREEN={Screen.PrimaryScreen!.WorkingArea}");
+                var output = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../../artifacts/ui-redesign-20261103"));
+                Directory.CreateDirectory(output);
+                foreach (var pageName in new[] { "Overview", "Pets", "Characters", "Interactions", "Settings" })
+                {
+                    Page(pageName);
+                    if (pageName == "Pets")
+                    {
+                        var reviewList = Descendants(manager).OfType<ListView>().Single(c => c.Visible);
+                        if (reviewList.Items.Count > 0) reviewList.Items[0].Selected = true;
+                        Pump(50);
+                    }
+                    using var shot = new Bitmap(manager.ClientSize.Width, manager.ClientSize.Height);
+                    manager.DrawToBitmap(shot, manager.ClientRectangle);
+                    shot.Save(Path.Combine(output, pageName.ToLowerInvariant() + ".png"));
+                    AssertPageLayout(pageName);
+                }
+                var initialSize = manager.ClientSize;
+                manager.Size = manager.MinimumSize;
+                Pump(60);
+                foreach (var pageName in new[] { "Overview", "Pets", "Characters", "Interactions", "Settings" })
+                {
+                    Page(pageName);
+                    AssertPageLayout(pageName);
+                    Console.WriteLine($"RESPONSIVE {pageName} CLIENT={manager.ClientSize} PASS");
+                }
+                manager.ClientSize = initialSize;
+                Page("Overview");
+                RunChromeRegression();
+                return 0;
+            }
             if (args.Contains("--baseline"))
             {
                 AssertBrandLogo();
@@ -112,7 +154,7 @@ internal static class Program
             list.Items[0].Selected = true;
             Pump(40);
             var petsPage = VisiblePage();
-            var scaleLabel = FindText(petsPage, "实例大小");
+            var scaleLabel = FindText(petsPage, "桌宠大小");
             Require(scaleLabel is { Visible: true } && IsFullyVisible(scaleLabel),
                 "pets instance scale setting is visible after selecting an instance");
             var scaleMode = Field(petsPage, "_scaleMode");
@@ -326,11 +368,11 @@ internal static class Program
         var page = VisiblePage();
         var required = name switch
         {
-            "Overview" => new[] { "YimyWalk", "桌面状态", "快捷操作", "创建桌宠" },
-            "Pets" => new[] { "桌宠", "未选择桌宠" },
+            "Overview" => new[] { "欢迎回到小窝", "陪伴小日常", "正在陪伴", "安心记住" },
+            "Pets" => new[] { "桌宠" },
             "Characters" => new[] { "角色", "角色列表", "角色 ID：" },
-            "Interactions" => new[] { "互动", "全局默认", "运行级限制" },
-            "Settings" => new[] { "设置", "应用外观与启动行为", "保存状态" },
+            "Interactions" => new[] { "互动", "陪伴的方式", "一点小脾气", "留一点安静" },
+            "Settings" => new[] { "设置", "她的桌面舞台", "偏好会被好好记住" },
             _ => Array.Empty<string>()
         };
         foreach (var text in required)
@@ -375,7 +417,7 @@ internal static class Program
         }
         if (name == "Pets")
         {
-            Require(FindText(page, "实例大小") is { Visible: true }, "pets exposes per-instance size setting");
+            Require(FindText(page, "桌宠大小") is { Visible: true }, "pets exposes per-instance size setting");
             Require(Descendants(page).Any(control => control.GetType().Name == "Select"), "pets uses AntdUI scale source select");
             Require(Descendants(page).Any(control => control.GetType().Name == "InputNumber" &&
                 Convert.ToDecimal(Property(control, "Minimum")) == 0.1m &&
@@ -477,6 +519,32 @@ internal static class Program
         Require(area.Contains(window.Bounds), "actual bubble remains in working area at top right");
         Console.WriteLine($"BUBBLE_WINDOW DPI={window.DeviceDpi} BOUNDS={window.Bounds} WORKAREA_FIT=PASS");
         Console.WriteLine("BUBBLE_PREVIEW " + Path.Combine(output, "bubble-preview.png"));
+    }
+
+    static void RunChromeRegression()
+    {
+        var normal = manager.Bounds;
+        var captionButtons = Descendants(manager).OfType<Button>().Where(b => b.Parent is FlowLayoutPanel && b.Name.Length > 0).ToArray();
+        captionButtons.Single(b => b.Name == "最大化或还原").PerformClick();
+        Pump(80);
+        Require(manager.WindowState == FormWindowState.Maximized, "custom caption maximizes");
+        Require(Screen.FromControl(manager).WorkingArea.Contains(manager.Bounds), "maximized manager respects taskbar");
+        captionButtons.Single(b => b.Name == "最大化或还原").PerformClick();
+        Pump(80);
+        Require(manager.WindowState == FormWindowState.Normal && manager.Bounds == normal, "custom caption restores normal bounds");
+        captionButtons.Single(b => b.Name == "最小化").PerformClick();
+        Pump(60);
+        Require(manager.WindowState == FormWindowState.Minimized, "custom caption minimizes");
+        Call(host, "ShowManager"); Pump(60);
+        Require(manager.WindowState == FormWindowState.Normal, "tray can restore minimized manager");
+        var point = manager.PointToScreen(new Point(1, manager.ClientSize.Height / 2));
+        var packed = (IntPtr)((uint)(ushort)point.X | ((uint)(ushort)point.Y << 16));
+        Require(YimyWalk.App.Windows.NativeMethods.SendMessage(manager.Handle, 0x0084, IntPtr.Zero, packed) == (IntPtr)10,
+            "custom manager retains native left-edge resize hit test");
+        captionButtons.Single(b => b.Name == "收起到托盘").PerformClick(); Pump(40);
+        Require(!manager.Visible && !manager.IsDisposed, "custom caption close hides to tray");
+        Call(host, "ShowManager"); Pump(40);
+        Console.WriteLine("CHROME MINIMIZE_MAXIMIZE_RESTORE_TRAY_RESIZE=PASS");
     }
 
     static Control VisiblePage()

@@ -6,6 +6,13 @@ namespace YimyWalk.App.UI;
 /// <summary>UI-facing Chinese labels for values that are stored as enums.</summary>
 internal static class UiText
 {
+    public static string CharacterName(string name) => name switch
+    {
+        "咿米_Yimy" => "咿米",
+        "咿米_Line" => "咿米 · 线稿",
+        "slime" => "小史莱姆",
+        _ => name
+    };
     public static string PetStateLabel(PetState state) => state switch
     {
         PetState.Idle => "发呆",

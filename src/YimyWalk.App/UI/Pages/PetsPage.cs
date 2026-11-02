@@ -7,7 +7,7 @@ namespace YimyWalk.App.UI.Pages;
 internal sealed class PetsPage : ManagerPage
 {
     private readonly PetListProjection _projection = new();
-    private readonly ListView _list = new()
+    private readonly ListView _list = new ThemedListView()
     {
         Dock = DockStyle.Fill,
         View = View.Details,
@@ -15,7 +15,7 @@ internal sealed class PetsPage : ManagerPage
         HideSelection = false,
         MultiSelect = false,
         HeaderStyle = ColumnHeaderStyle.Nonclickable,
-        BorderStyle = BorderStyle.FixedSingle,
+        BorderStyle = BorderStyle.None,
         TabStop = true
     };
     private readonly Label _empty = UiTheme.CreateBodyLabel("当前没有运行中的桌宠。");
@@ -24,13 +24,13 @@ internal sealed class PetsPage : ManagerPage
     private readonly Label _runtime = UiTheme.CreateBodyLabel();
     private readonly Label _operation = UiTheme.CreateMutedLabel();
     private readonly Label _saveNote = UiTheme.CreateMutedLabel("这些设置重启后失效。");
-    private readonly Label _walkSource = UiTheme.CreateBodyLabel();
-    private readonly Label _dialogueSource = UiTheme.CreateBodyLabel();
-    private readonly Label _activitySource = UiTheme.CreateBodyLabel();
-    private readonly Label _scaleSource = UiTheme.CreateBodyLabel();
-    private readonly Label _jumpDesireSource = UiTheme.CreateBodyLabel();
-    private readonly Label _climbDesireSource = UiTheme.CreateBodyLabel();
-    private readonly Label _windowJumpDesireSource = UiTheme.CreateBodyLabel();
+    private readonly Label _walkSource = UiTheme.CreateMutedLabel();
+    private readonly Label _dialogueSource = UiTheme.CreateMutedLabel();
+    private readonly Label _activitySource = UiTheme.CreateMutedLabel();
+    private readonly Label _scaleSource = UiTheme.CreateMutedLabel();
+    private readonly Label _jumpDesireSource = UiTheme.CreateMutedLabel();
+    private readonly Label _climbDesireSource = UiTheme.CreateMutedLabel();
+    private readonly Label _windowJumpDesireSource = UiTheme.CreateMutedLabel();
     private readonly AntdUI.Select _walkOverride = CreateOverrideCombo();
     private readonly AntdUI.Select _dialogueOverride = CreateOverrideCombo();
     private readonly AntdUI.Select _activityMode = UiTheme.CreateSelect(120);
@@ -54,9 +54,14 @@ internal sealed class PetsPage : ManagerPage
     public PetsPage(AppHost host) : base(host)
     {
         _preview = new CharacterFramePreview(host.SurfaceCache) { Anchor = AnchorStyles.Top | AnchorStyles.Right };
-        _list.Columns.Add("实例", 90);
+        _list.Columns.Add("编号", 90);
         _list.Columns.Add("角色", 110);
         _list.Columns.Add("状态", 80);
+        _list.SizeChanged += (_, _) =>
+        {
+            var widths = new[] { .28, .45, .27 };
+            for (var i = 0; i < 3; i++) _list.Columns[i].Width = Math.Max(48, (int)((_list.ClientSize.Width - 6) * widths[i]));
+        };
         _activityMode.Items.AddRange(new object[] { "跟随全局", "自定义" });
         _activityMode.SelectedIndex = 0;
         _scaleMode.Items.AddRange(new object[] { "跟随全局", "自定义" });
@@ -75,7 +80,7 @@ internal sealed class PetsPage : ManagerPage
         // the remaining page height instead of staying at its 430px minimum.
         layout.Dock = DockStyle.Fill;
         layout.AutoSize = false;
-        AddHeading(layout, "桌宠", "选择桌宠，调整它这一次的设置。");
+        AddHeading(layout, "桌宠", "每一只小可爱，都有自己的小脾气。");
         var split = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, MinimumSize = new Size(0, 430), ColumnCount = 2, RowCount = 1 };
         split.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
         split.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58));
@@ -128,7 +133,7 @@ internal sealed class PetsPage : ManagerPage
         ShowSelectedPet();
     }
 
-    private AntdUI.Panel BuildDetailPanel()
+    private UiCard BuildDetailPanel()
     {
         var panel = UiTheme.CreateCard();
         panel.Dock = DockStyle.Fill;
@@ -159,7 +164,7 @@ internal sealed class PetsPage : ManagerPage
         var scaleEditors = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Margin = Padding.Empty };
         scaleEditors.Controls.Add(_scaleMode);
         scaleEditors.Controls.Add(_scale);
-        AddSettingRow(settings, "实例大小", scaleEditors, _scaleSource);
+        AddSettingRow(settings, "桌宠大小", scaleEditors, _scaleSource);
         var jumpDesireEditors = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Margin = Padding.Empty };
         jumpDesireEditors.Controls.Add(_jumpDesireMode);
         jumpDesireEditors.Controls.Add(_jumpDesire);
@@ -237,13 +242,14 @@ internal sealed class PetsPage : ManagerPage
                 if (!byId.TryGetValue(item.InstanceId, out var row))
                 {
                     row = new ListViewItem(item.InstanceId.ToString("N")[..8]) { Tag = item.InstanceId };
-                    row.SubItems.Add(item.RoleName);
+                    row.SubItems.Add(UiText.CharacterName(item.RoleName));
                     row.SubItems.Add(UiText.PetStateLabel(item.State));
                     _list.Items.Insert(index, row);
                 }
                 else
                 {
-                    if (row.SubItems[1].Text != item.RoleName) row.SubItems[1].Text = item.RoleName;
+                    var name = UiText.CharacterName(item.RoleName);
+                    if (row.SubItems[1].Text != name) row.SubItems[1].Text = name;
                     if (row.SubItems[2].Text != UiText.PetStateLabel(item.State)) row.SubItems[2].Text = UiText.PetStateLabel(item.State);
                 }
             }
@@ -296,8 +302,8 @@ internal sealed class PetsPage : ManagerPage
         var pet = _projection.Items.FirstOrDefault(item => item.InstanceId == _projection.SelectedInstanceId);
         var changedTarget = _editingId != pet?.InstanceId;
         _editingId = pet?.InstanceId;
-        _detailTitle.Text = pet is null ? "未选择桌宠" : pet.Definition.DisplayName;
-        _detailMeta.Text = pet is null ? "从左侧列表选择运行实例。" : $"实例 {pet.InstanceId.ToString("N")[..8]}";
+        _detailTitle.Text = pet is null ? "未选择桌宠" : UiText.CharacterName(pet.Definition.DisplayName);
+        _detailMeta.Text = pet is null ? "从左边选一只，看看它的小日常。" : $"桌宠编号 {pet.InstanceId.ToString("N")[..8]}";
         _runtime.Text = pet is null ? string.Empty : $"状态：{UiText.PetStateLabel(pet.State)} · 饥饿：{pet.Hunger:0.0}\n位置：{pet.Position.X:0}, {pet.Position.Y:0}";
         _preview.ShowIdleFrame(pet?.Definition);
         _remove.Enabled = _feed.Enabled = _reset.Enabled = pet is not null;

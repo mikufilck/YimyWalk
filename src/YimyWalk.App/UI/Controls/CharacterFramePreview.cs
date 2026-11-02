@@ -13,8 +13,8 @@ internal sealed class CharacterFramePreview : UserControl
     public CharacterFramePreview(FrameSurfaceCache cache)
     {
         _cache = cache;
-        BackColor = Color.FromArgb(255, 246, 224);
-        BorderStyle = BorderStyle.FixedSingle;
+        BackColor = UiTheme.Preview;
+        BorderStyle = BorderStyle.None;
         MinimumSize = new Size(120, 120);
         Size = new Size(180, 180);
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);

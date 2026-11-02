@@ -1,5 +1,7 @@
 using YimyWalk.App.Host;
 using YimyWalk.App.UI.Pages;
+using YimyWalk.App.UI.Controls;
+using YimyWalk.App.Windows;
 
 namespace YimyWalk.App.UI;
 
@@ -17,7 +19,7 @@ internal sealed class ManagerForm : Form
     {
         Name = "BrandLogo",
         AccessibleName = "YimyWalk 标志",
-        Height = 176,
+        Height = 54,
         Dock = DockStyle.Bottom,
         SizeMode = PictureBoxSizeMode.Zoom,
         BackColor = Color.Transparent,
@@ -32,14 +34,18 @@ internal sealed class ManagerForm : Form
     {
         _host = host;
         UiTheme.ConfigureAntd();
-        Text = "YimyWalk";
+        Text = "YimyWalk · 咿米的桌面小窝";
         Icon = AppIcon.Load();
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96, 96);
-        ClientSize = new Size(1120, 720);
-        MinimumSize = new Size(900, 580);
+        var area = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
+        ClientSize = new Size(Math.Min(LogicalToDeviceUnits(1120), area.Width - 48), Math.Min(LogicalToDeviceUnits(760), area.Height - 48));
+        MinimumSize = new Size(Math.Min(LogicalToDeviceUnits(960), area.Width - 48), Math.Min(LogicalToDeviceUnits(640), area.Height - 48));
         StartPosition = FormStartPosition.CenterScreen;
-        FormBorderStyle = FormBorderStyle.Sizable;
+        FormBorderStyle = FormBorderStyle.None;
+        BackColor = UiTheme.Cream;
+        Padding = new Padding(8);
+        DoubleBuffered = true;
         MaximizeBox = true;
         MinimizeBox = true;
         ShowInTaskbar = true;
@@ -56,18 +62,23 @@ internal sealed class ManagerForm : Form
 
     private void BuildShell()
     {
-        var root = new TableLayoutPanel { Name = "ShellLayout", Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
+        var shell = new TableLayoutPanel { Name = "ShellLayout", Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = Padding.Empty };
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        shell.RowStyles.Add(new RowStyle(SizeType.Absolute, LogicalToDeviceUnits(44)));
+        shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        Controls.Add(shell); shell.Controls.Add(new ManagerChrome(this), 0, 0);
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LogicalToDeviceUnits(UiTheme.SidebarWidth)));
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        Controls.Add(root);
+        shell.Controls.Add(root, 0, 1);
         var sidebar = new Panel
         {
             Name = "Sidebar",
             Dock = DockStyle.Fill,
             Margin = Padding.Empty,
             BackColor = UiTheme.Yellow,
-            Padding = new Padding(UiTheme.Space12, UiTheme.Space16, UiTheme.Space12, LogicalToDeviceUnits(32))
+            Padding = new Padding(18, 18, 18, 20)
         };
         root.Controls.Add(sidebar, 0, 0);
 
@@ -75,14 +86,20 @@ internal sealed class ManagerForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 3,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         sidebarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, LogicalToDeviceUnits(84)));
         sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, LogicalToDeviceUnits(184)));
+        sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, LogicalToDeviceUnits(190)));
         sidebar.Controls.Add(sidebarLayout);
+
+        var brand = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty };
+        var wordmark = UiTheme.CreateBodyLabel("YimyWalk"); wordmark.Font = UiTheme.BrandFont;
+        brand.Controls.Add(wordmark); brand.Controls.Add(UiTheme.CreateMutedLabel("咿米的桌面小窝"));
+        sidebarLayout.Controls.Add(brand, 0, 0);
 
         using (var stream = typeof(ManagerForm).Assembly.GetManifestResourceStream("YimyWalk.App.Resources.logo.png")
             ?? throw new InvalidOperationException("Application logo resource is missing."))
@@ -90,7 +107,7 @@ internal sealed class ManagerForm : Form
             _brandLogo.Image = new Bitmap(source);
 
         var nav = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, UiTheme.Space8, 0, 0) };
-        sidebarLayout.Controls.Add(nav, 0, 0);
+        sidebarLayout.Controls.Add(nav, 0, 1);
         AddNavigation(nav, ManagerPageId.Settings, "设置");
         AddNavigation(nav, ManagerPageId.Interactions, "互动");
         AddNavigation(nav, ManagerPageId.Characters, "角色");
@@ -98,8 +115,16 @@ internal sealed class ManagerForm : Form
         AddNavigation(nav, ManagerPageId.Overview, "总览");
 
         var footer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, UiTheme.Space8, 0, 0) };
-        sidebarLayout.Controls.Add(footer, 0, 1);
+        sidebarLayout.Controls.Add(footer, 0, 2);
+        var companion = new CompanionArt { Dock = DockStyle.Fill };
+        footer.Controls.Add(companion);
         footer.Controls.Add(_brandLogo);
+        sidebar.SizeChanged += (_, _) =>
+        {
+            var room = sidebar.ClientSize.Height - sidebar.Padding.Vertical - LogicalToDeviceUnits(84) - 264;
+            sidebarLayout.RowStyles[2].Height = Math.Clamp(room, 0, LogicalToDeviceUnits(190));
+            footer.Visible = room > 54;
+        };
 
         var content = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.Cream, Padding = Padding.Empty, Margin = Padding.Empty };
         root.Controls.Add(content, 1, 0);
@@ -112,6 +137,7 @@ internal sealed class ManagerForm : Form
     {
         var button = UiTheme.CreateNavButton(label);
         button.Tag = pageId;
+        button.IconSvg = UiMotifs.Icon(pageId switch { ManagerPageId.Overview => "home", ManagerPageId.Pets => "paw", ManagerPageId.Interactions => "heart", ManagerPageId.Settings => "settings", _ => "dog" });
         button.AccessibleName = $"导航到{label}";
         button.Click += (_, _) => SelectPage(pageId);
         nav.Controls.Add(button);
@@ -135,7 +161,8 @@ internal sealed class ManagerForm : Form
             _selectedPage = pageId;
             foreach (var pair in _navigation)
             {
-                pair.Value.DefaultBack = pair.Key == pageId ? UiTheme.Coral : UiTheme.Sidebar;
+                pair.Value.DefaultBack = pair.Key == pageId ? Color.White : UiTheme.Sidebar;
+                pair.Value.DefaultBorderColor = pair.Key == pageId ? UiTheme.Border : Color.Transparent;
                 pair.Value.ForeColor = pair.Key == pageId ? UiTheme.NavInk : UiTheme.Ink;
                 pair.Value.AccessibleDescription = pair.Key == pageId ? "当前页面" : string.Empty;
             }
@@ -221,6 +248,34 @@ internal sealed class ManagerForm : Form
     }
 
     public void AllowClose() => _allowClose = true;
+
+    internal void ToggleMaximize()
+    {
+        MaximizedBounds = Screen.FromControl(this).WorkingArea;
+        WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized;
+    }
+
+    protected override void WndProc(ref Message message)
+    {
+        if (message.Msg == NativeMethods.WM_NCHITTEST && WindowState == FormWindowState.Normal)
+        {
+            var p = PointToClient(new Point(unchecked((short)message.LParam.ToInt64()), unchecked((short)(message.LParam.ToInt64() >> 16))));
+            var edge = LogicalToDeviceUnits(7);
+            var left = p.X < edge; var right = p.X >= ClientSize.Width - edge;
+            var top = p.Y < edge; var bottom = p.Y >= ClientSize.Height - edge;
+            var hit = top && left ? 13 : top && right ? 14 : bottom && left ? 16 : bottom && right ? 17
+                : left ? 10 : right ? 11 : top ? 12 : bottom ? 15 : 0;
+            if (hit != 0) { message.Result = (IntPtr)hit; return; }
+        }
+        base.WndProc(ref message);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        using var pen = new Pen(UiTheme.Border);
+        e.Graphics.DrawRectangle(pen, 0, 0, Math.Max(0, Width - 1), Math.Max(0, Height - 1));
+    }
 
     protected override void Dispose(bool disposing)
     {
