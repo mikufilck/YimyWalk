@@ -1,3 +1,19 @@
+# 2026-11-03 v0.3.2 发布预检
+
+用户要求构建并发布 0.3.2。基线 `d165970`；版本真源已升为 0.3.2，Unreleased 内容归入正式版本说明，README 的下载入口改为当前仓库。远端尚无 v0.3.2 标签或 Release，工作区原先干净；GitHub CLI 可访问当前仓库，上一提交 GitHub Actions 为 success。
+
+**① 代码已实现**：发布包含此前 UI 重做、共享组件、单只完整重置与角色刷新选择修复，以及待机 5–35 秒 / 行走 3–20 秒默认区间。产品逻辑本轮不改；DesktopSmoke 的跨屏反射调用补齐 StartWalking 的可选时长参数，跨屏分支仅编译未实跑。
+
+**② 构建通过**：`scripts/verify-environment.ps1`、0.3.2 预检构建与验包通过：`PACKAGE PASS VERSION=0.3.2 FILES=15 CHECKSUMS=14`。首次预检包 InformationalVersion 指向基线提交，不能将它当作最终标签产物。待提交本次发布准备后，从干净的发布提交重建，再核对 EXE 文件版本 / 提交号、ZIP 和远端附件。
+
+**③ Core 测试通过**：`scripts/test-yimywalk.ps1` 和预检发布流程实跑 Core **187** / App **24**，0 失败、0 跳过。
+
+**④ Windows 桌面已验证（当前单屏范围）**：0.3.2 完整 ManagerUiSmoke、五页默认 / 最小窗口与独立 desktop-input-smoke 均通过；后者 `RESULT PASS`。DesktopSmoke 首次 `-Landing` 失败：pet=285、probe=300；诊断运行发现同一区域有顶边 285 的其他窗口，随后原测试曾通过。原夹具从屏幕顶部落下，依赖其他窗口的层级 / 遮挡状态。已改为先核对探针自身的原生顶边、可见且未遮挡，再从其正上方 0.5 物理像素起落；不放宽精确落点及关闭后再次下落断言。修正后 `WINDOW LANDING TOP=300 PET=300 PASS`，再次下落通过；1/10/50/100 创建清空、缓存释放和角色重载通过。本项修正隔离测试环境，不改产品落脚规则。
+
+**Windows 桌面未验证**：多屏、真实跨屏 DPI、OS 缩放切换、拔插 / 睡眠和长期压力。单次 100 只不是流畅性或长期资源承诺。
+
+证据在 `artifacts/release-0.3.2/`：tests.log、publish.log、package.log、full-ui.log、visual-review.log、input-smoke.log、desktop-smoke.log；首次失败与诊断分别保留在 desktop-smoke-first-failure.log 和 desktop-smoke-diagnostic.log。本条为发布准备记录，推送标签 / Release / 附件校验结果在完成后追加。
+
 # 2026-11-03 UI 功能组件审查、共享控件与页面重构
 
 **基线与范围**：`9d057ba`，工作区开始时干净。用户要求检查按钮及所属功能组件是否需要重构，并统一可复用 UI。审查快照与复现入口见 [UI-01–05](reviews/2026-11-03-ui-components.md)，设计与页面图见 [UI_DESIGN](UI_DESIGN.md)。

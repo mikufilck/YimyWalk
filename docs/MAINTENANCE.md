@@ -1,6 +1,6 @@
 # YimyWalk 当前维护记忆
 
-> 最近核对：2026-11-03；维护分支 `codex/bootstrap`，当前版本 **0.3.1**。实际提交与同步状态以 `git log -1`、`git status` 和远端分支为准。验证证据见 [STATUS](STATUS.md)，代码定位见 [INDEX](INDEX.md)，R01–R13 处置见 [修复记录](reviews/2026-11-01-remediation.md)。
+> 最近核对：2026-11-03；维护分支 `codex/bootstrap`，当前版本 **0.3.2**。实际提交与同步状态以 `git log -1`、`git status` 和远端分支为准。验证证据见 [STATUS](STATUS.md)，代码定位见 [INDEX](INDEX.md)，R01–R13 处置见 [修复记录](reviews/2026-11-01-remediation.md)。
 
 ## 项目与维护方向
 
@@ -27,7 +27,7 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 | 外部与图标边界 | 外部反馈默认关闭，读取前台进程 ID，沿用 program_opened 台词组，实际语义是前台切换。食物是程序圆点，不读取 / 移动真实图标。气泡 / 食物整窗输入透明，也从宿主落脚与遮挡集合排除 |
 | 气泡外观 | App 的 BubbleRenderer 对嵌入 PNG 做九宫格缩放，台词独立按 DPI 渲染；BubbleWindow 拥有并释放位图，移动复用，按所在屏工作区定位。统一默认皮肤，未增加角色主题字段；原角色图与正式台词未改 |
 | PNG 与角色 | Core 的 PngImage 只开放受限 PNG，采用 StbImageNext 1.0.0；ImageSharp 已从依赖图移除。三套随包角色仍为 1254×1254 / 单格 418×418，素材未改；cat 只作测试 fixture |
-| 版本与构建 | 版本真源 Directory.Build.props = 0.3.1；构建、publish 与验包脚本从同一文件读取默认值。.sln 为 Core / App / Core.Tests / App.Tests / CharacterValidator 五个项目 |
+| 版本与构建 | 版本真源 Directory.Build.props = 0.3.2；构建、publish 与验包脚本从同一文件读取默认值。.sln 为 Core / App / Core.Tests / App.Tests / CharacterValidator 五个项目 |
 | 界面文案 | 用户可见文字集中在 `UI/Pages/*.cs` 与 `UI/TrayIconHost.cs`；枚举转中文经 `UI/UiText.cs`。直接描述功能，统一「桌宠 / 设置 / 默认值 / 缩放 / 倾向」；不重复编辑器数值，保留真实错误、全局开关影响与单只设置不持久化说明。保存失败时任意页底部显示链接，点击进入设置重试，成功后隐藏 |
 | 单只设置 | NumberOverrideEditor 统一五组数值的全局继承、百分比换算与静默刷新；切换目标不串值。恢复默认调用 AppHost.ResetPetOverrides，同时清除行为和缩放；喂食仅在发呆 / 走动可用，操作后立即重新采样，不能拿旧投影覆盖新状态 |
 | 角色操作 | 页头刷新按角色 ID 保留当前预览选择与首行，缺失时才回退默认角色；点击设为默认才改变创建角色。列表同步核对显示名及默认标记 |
@@ -41,15 +41,15 @@ M0–M4 仍是完整目标。图标分身、额外动作、完整事件调度、
 | 档位 | 结果 |
 | --- | --- |
 | ① 代码已实现 | UI-01–05 组件审查与修正：完整单只重置、刷新保留预览、共享数值编辑器 / 设置行 / 布局 / 列表 / 按钮入口，以及桌宠 / 角色页重排；保持可爱风格，Core / 角色 PNG / 动画 / 设置 schema 未改 |
-| ② 构建通过 | 本地 SDK 8.0.426；本次构建 0 警告 / 0 错误，0.3.1 当前 UI 自包含预览包与验包通过（15 个文件 / 14 条校验）；正式 Release 未覆盖 |
+| ② 构建通过 | 本地 SDK 8.0.426；0.3.2 发布预检构建 / 验包通过（15 个文件 / 14 条校验）；待从发布提交重建并上传正式 Release，不能把预检包当作已发布附件 |
 | ③ Core 测试通过 | 本次 Core 187 / App 24 均通过，0 失败、0 跳过 |
-| ④ Windows 桌面 | 本次单屏 2560×1600、144 DPI / 150%：完整 input smoke 与真实鼠标拖动 / 角落缩放通过；五页默认 / 最小窗口、固定操作栏、继承切换不串值、全量重置、刷新保留预览与设默认、删除与保存失败重试回归通过。多屏 / OS DPI 切换 / 长期压力本次未验证 |
+| ④ Windows 桌面 | 本次 0.3.2 单屏 2560×1600、144 DPI / 150%：完整 input / UI smoke 与五页默认 / 最小窗口通过；窗口落脚 / 关闭后再下落及 1/10/50/100 创建清空通过。首次落脚检查受其他窗口影响，探针隔离修正及原始失败证据见 STATUS。多屏 / OS DPI 切换 / 长期压力未验证 |
 
 **Windows 桌面未验证**：至少两块扩展显示器的矩阵、真实负坐标布局、物理拔插、睡眠唤醒、完整 OS DPI 组合和长时间资源趋势。UI 渲染的 96/120/144/192 DPI 像素计算不是操作系统 DPI 切换验收。短测试清空的 GDI 回落不等同于长期无泄漏。
 
 ## 下一次工作的入口
 
-最新 UI 预览位于 `artifacts/ui-components-20261103/`，旧预览目录仅供对照；版本仍为 0.3.1，未新建正式 tag / Release。组件重构证据见 [UI-01–05](reviews/2026-11-03-ui-components.md)，界面约定见 [UI_DESIGN](UI_DESIGN.md)。后续改参数优先复用 NumberOverrideEditor / SettingRows，分栏与基础布局复用 UiLayout，不把双向绑定再复制回页面。继续以简短文案配可爱布局；不要回滚昨天的默认角色、启动生成、行为节奏修正。硬件验收具备条件时继续记录，不能用效果图或文档把 UNVERIFIED 改成 PASS。
+0.3.2 发布准备与证据位于 `artifacts/release-0.3.2/`，待从发布提交重建 ZIP、校验、推送标签并创建 GitHub Release；以 STATUS 最新条目和远端实查为准。旧 UI 预览目录仅供对照。组件重构见 [UI-01–05](reviews/2026-11-03-ui-components.md)，界面约定见 [UI_DESIGN](UI_DESIGN.md)。后续优先复用 NumberOverrideEditor / SettingRows / UiLayout，保持简短文案与可爱布局。多屏等硬件验收具备条件时继续，不能用文档或截图把 UNVERIFIED 改成 PASS。
 
 保留 HardLimit 公开 API 与 WarningLimit 设置字段的兼容性；它们未在生产启用，不自动构成获准删除的理由。后续结构拆分由实际改动需要决定，不照抄旧评审的拆类数量目标。
 

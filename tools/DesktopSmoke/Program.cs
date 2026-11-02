@@ -158,7 +158,7 @@ if (targetedRequested)
         })!;
         var startWalking = crossPet.GetType().GetMethod("StartWalking")!;
         var direction = Enum.Parse(startWalking.GetParameters()[0].ParameterType, "Right");
-        startWalking.Invoke(crossPet, new[] { direction });
+        startWalking.Invoke(crossPet, new object[] { direction, 0f });
         var reachedTarget = false;
         for (var tick = 0; tick < 2000; tick++)
         {
@@ -217,9 +217,20 @@ if (landingRequested)
     Application.DoEvents();
     type.GetProperty("WindowLandingEnabled")!.SetValue(host, true);
     refreshWindowSurfaces.Invoke(host, Array.Empty<object>());
+    var probeId = landingProbe.Handle.ToInt64().ToString("X", System.Globalization.CultureInfo.InvariantCulture);
+    var landingCandidates = ((System.Collections.IEnumerable)type.GetProperty("WindowSurfaceCandidates")!.GetValue(host)!).Cast<object>();
+    var probeSurface = landingCandidates.SingleOrDefault(candidate => string.Equals(Property(candidate, "Id").ToString(), probeId, StringComparison.OrdinalIgnoreCase))
+        ?? throw new InvalidOperationException("landing probe was not enumerated");
+    var probeBounds = (WorldRect)Property(probeSurface, "Bounds");
+    if ((bool)Property(probeSurface, "IsExcluded") || (bool)Property(probeSurface, "IsOccluded") || probeBounds.Top != landingProbe.Top)
+        throw new InvalidOperationException("landing probe must expose its visible native top edge");
+    // Start immediately above the controlled surface. A fall from the screen
+    // top can correctly land on an unrelated user window before reaching it.
+    var probeSpawn = new Vector2((probeBounds.Left + probeBounds.Right) / 2, probeBounds.Top - 0.5f);
+    Console.WriteLine($"LANDING PROBE_TOP={probeBounds.Top} SPAWN_Y={probeSpawn.Y}");
     var createAt = session.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
         .Single(method => method.Name == "Create" && method.GetParameters().Length == 2);
-    createAt.Invoke(session, new object[] { "cat", new Vector2(1430, -32) });
+    createAt.Invoke(session, new object[] { "cat", probeSpawn });
     var landingDeadline = Environment.TickCount64 + 5000;
     while (Environment.TickCount64 < landingDeadline)
     {

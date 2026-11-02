@@ -21,7 +21,7 @@ YimyWalk 是一个面向 Windows x64 的离线桌面 2D 宠物引擎。它采用
 
 ## 下载与运行
 
-优先从 GitHub 仓库的 [Releases](https://github.com/Data-Echo/YimyWalk/releases) 下载 Windows x64 便携包。发布包是 self-contained 单文件应用，通常不需要另行安装 .NET 运行时。如果 Releases 暂时还没有对应版本，可以按下方步骤从源码构建。
+优先从 GitHub 仓库的 [Releases](https://github.com/mikufilck/YimyWalk/releases) 下载 Windows x64 便携包。发布包是 self-contained 单文件应用，通常不需要另行安装 .NET 运行时。如果 Releases 暂时还没有对应版本，可以按下方步骤从源码构建。
 
 解压后双击 `YimyWalk.exe` 即可启动。当前会自动创建一只默认角色，管理器从托盘打开；普通关闭管理器会隐藏回托盘。角色目录应与程序放在同一发布目录中：
 

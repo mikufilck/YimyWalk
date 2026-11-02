@@ -3,7 +3,7 @@
 > **用途**：把「要改什么 → 去哪个文件 → 读哪份文档」压缩成一页，减少每次都全仓库搜索的成本。
 > **读法**：先读 [`AGENTS.md`](../AGENTS.md)（约束与命令），再用本页定位；具体行为以源码为准。
 > **维护约定**：新增/删除/改名 顶层目录、项目、枢纽文件、`scripts/*.ps1`、`tools/*` 时**必须同步本页**。
-> **最后核对**：2026-11-03，维护分支 `codex/bootstrap`、版本 0.3.1；当前行为与四档验证见 [`MAINTENANCE.md`](MAINTENANCE.md)，本页只维护导航。
+> **最后核对**：2026-11-03，维护分支 `codex/bootstrap`、版本 0.3.2；当前行为与四档验证见 [`MAINTENANCE.md`](MAINTENANCE.md)，本页只维护导航。
 > **快速接手**：[当前维护记忆](MAINTENANCE.md) → [最新交接](STATUS.md) → [本轮问题处置](reviews/2026-11-01-remediation.md)。首次接手还需读取 [原始需求](PROJECT_SPEC.md)。
 
 按任务读取：[Core §3](#3-yimywalkcore-模块地图) · [App §4](#4-yimywalkapp-模块地图) · [测试 §5](#5-测试地图testsyimywalkcoretests) · [工具/脚本 §6](#6-工具与脚本入口) · [文档 §7](#7-文档地图) · [命令 §9](#9-常用命令) · [改动落点 §11](#11-改动落点-checklist)。不必每次加载全部模块表。
@@ -38,7 +38,7 @@ YimyWalk 是一个**离线运行的 Windows x64 桌面 2D 宠物引擎**。核�
 | `examples/character-template/` | 作者模板（含 `character.json` + `dialogue.txt`） | 改角色格式文档的配套示例 |
 | `docs/` | 规格、架构、状态交接、测试入口、角色格式、上游审计、索引 | 见 [§7](#7-文档地图) |
 | `licenses/` + `THIRD_PARTY_NOTICES.md` | 第三方许可与署名 | 增删依赖时必须同步 |
-| `Directory.Build.props` | 统一版本号真源（默认 `0.3.1`，脚本从此读取，可显式 `-Version` 覆盖） | 改默认版本 |
+| `Directory.Build.props` | 统一版本号真源（默认 `0.3.2`，脚本从此读取，可显式 `-Version` 覆盖） | 改默认版本 |
 | `global.json` | 锁定 SDK `8.0.425`（`rollForward: latestPatch`） | 升级 SDK 时 |
 | `YimyWalk.sln` | 只含 Core / Core.Tests / App / App.Tests / CharacterValidator **5 个项目** | 新项目入解决方案 |
 | `.github/workflows/dotnet.yml` | CI：`codex/bootstrap` 的 push/PR 上 Ubuntu + Windows 矩阵；Ubuntu Core，Windows Core/App + smoke 编译 | 改 CI 范围（注意：CI **不跑** Windows 桌面 smoke） |
