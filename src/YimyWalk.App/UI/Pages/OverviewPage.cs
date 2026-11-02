@@ -38,12 +38,12 @@ internal sealed class OverviewPage : ManagerPage
         _defaultRole.Font = UiTheme.SectionFont;
         _defaultRole.Margin = new Padding(0, 12, 0, 12);
         form.Controls.Add(_defaultRole, 0, 0);
-        var status = Flow();
+        var status = UiLayout.Flow();
         status.Margin = new Padding(0, 0, 0, 24);
         status.Controls.Add(_active); status.Controls.Add(_pending);
         form.Controls.Add(status, 0, 1);
         form.SizeChanged += (_, _) => _defaultRole.MaximumSize = new Size(Math.Max(1, form.ClientSize.Width), 0);
-        var createRow = Flow();
+        var createRow = UiLayout.Flow();
         var quantity = UiTheme.CreateBodyLabel("数量");
         quantity.Margin = new Padding(0, 12, 12, 0);
         _createCount.Items.AddRange(new object[] { "1", "10", "50", "100" });
@@ -66,11 +66,10 @@ internal sealed class OverviewPage : ManagerPage
         welcome.Controls.Add(creation);
         AddRow(layout, welcome);
 
-        var actions = Flow();
-        void AddAction(string text, Action action, string? icon = null)
+        var actions = UiLayout.Flow();
+        void AddAction(string text, Action action, string? icon = null, bool danger = false)
         {
-            var button = UiTheme.CreateButton(text);
-            if (icon is not null) button.IconSvg = UiMotifs.Icon(icon);
+            var button = UiTheme.CreateButton(text, icon: icon, danger: danger);
             button.Click += (_, _) => action(); actions.Controls.Add(button);
         }
         AddAction("喂食全部", () => Host.FeedAll(), "bone");
@@ -79,7 +78,7 @@ internal sealed class OverviewPage : ManagerPage
         actions.Controls.Add(_pause);
         AddAction("隐藏桌宠", () => Host.SetPetsVisible(false));
         AddAction("显示桌宠", () => Host.SetPetsVisible(true));
-        AddAction("一键清空", () => Host.ClearPets());
+        AddAction("清空桌宠", () => Host.ClearPets(), "trash", danger: true);
         var actionPanel = UiTheme.CreateCard();
         actionPanel.AutoSize = true; actionPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         actionPanel.Padding = new Padding(20, 20, 10, 10);
@@ -87,11 +86,6 @@ internal sealed class OverviewPage : ManagerPage
         AddRow(layout, actionPanel); AddRow(layout, _operation);
     }
 
-    private static FlowLayoutPanel Flow() => new()
-    {
-        Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-        WrapContents = true, Margin = Padding.Empty
-    };
     public override string PageTitle => "总览";
     public override void RefreshFromHost()
     {

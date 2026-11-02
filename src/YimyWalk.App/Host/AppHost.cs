@@ -399,6 +399,14 @@ internal sealed class AppHost : ApplicationContext
     public bool ResetPetScaleOverride(Guid instanceId)
         => SetPetScaleOverride(instanceId, null);
 
+    public bool ResetPetOverrides(Guid instanceId)
+    {
+        var pet = FindPet(instanceId);
+        if (pet is null) return false;
+        pet.BehaviorOverrides = PetBehaviorOverrides.Inherit;
+        return ResetPetScaleOverride(instanceId);
+    }
+
     private void ClearVirtualFood()
     {
         _virtualFood.Clear();

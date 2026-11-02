@@ -37,6 +37,9 @@ internal static class UiMotifs
             "paw" => "<ellipse cx='5' cy='9' rx='2' ry='3'/><ellipse cx='10' cy='5' rx='2' ry='3'/><ellipse cx='16' cy='5' rx='2' ry='3'/><ellipse cx='21' cy='9' rx='2' ry='3'/><path d='M7 19c-4-5 3-9 6-9s10 5 6 9c-2 2-4 0-6 0s-4 2-6 0z'/>",
             "heart" => "<path d='M12 21C-5 10 6-1 12 6 18-1 29 10 12 21z'/>",
             "bone" => "<path d='M7 8C3 0-2 8 3 12c-5 5 1 12 4 4h10c3 8 9 1 4-4 5-4 0-12-4-4z'/>",
+            "trash" => "<path d='M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7'/>",
+            "reset" => "<path d='M4 10a8 8 0 1 1 0 5M4 3v7h7'/>",
+            "refresh" => "<path d='M4 10a8 8 0 0 1 14-5l2 3M20 3v5h-5M20 14A8 8 0 0 1 6 19l-2-3M4 21v-5h5'/>",
             "settings" => "<path d='M4 6h16M4 12h16M4 18h16'/><circle cx='9' cy='6' r='2.5' fill='white'/><circle cx='16' cy='12' r='2.5' fill='white'/><circle cx='8' cy='18' r='2.5' fill='white'/>",
             _ => "<path d='M4 6 8 9h8l4-3v9c0 8-16 8-16 0z'/><path d='M9 14h.01M15 14h.01M11 18h2'/>"
         };

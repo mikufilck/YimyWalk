@@ -24,6 +24,7 @@ internal static class UiTheme
     public static readonly Color BlueWash = Color.FromArgb(238, 246, 253);
     public static readonly Color Gold = Color.FromArgb(196, 159, 97);
     public static readonly Color Preview = Color.FromArgb(255, 245, 249);
+    public static readonly Color Danger = Color.FromArgb(164, 66, 85);
 
     private static readonly string UiFont = FontFamily.Families.Any(f => f.Name.Equals("Microsoft YaHei UI", StringComparison.OrdinalIgnoreCase))
         ? "Microsoft YaHei UI" : "Segoe UI";
@@ -41,20 +42,22 @@ internal static class UiTheme
         AntdUI.Config.Animation = true;
     }
 
-    public static AntdUI.Button CreateButton(string text, bool primary = false)
+    public static AntdUI.Button CreateButton(string text, bool primary = false, string? icon = null, bool danger = false)
         => new()
         {
             Text = text,
+            AccessibleName = text,
+            IconSvg = icon is null ? null : UiMotifs.Icon(icon),
             AutoSize = false,
             Width = Math.Max(primary ? 172 : 112, TextRenderer.MeasureText(text, BodyFont).Width + 54),
             Height = 48,
             Type = primary ? AntdUI.TTypeMini.Primary : AntdUI.TTypeMini.Default,
             DefaultBack = primary ? Teal : Color.White,
-            DefaultBorderColor = primary ? Teal : Border,
+            DefaultBorderColor = primary ? Teal : danger ? Coral : Border,
             BorderWidth = primary ? 0 : 1,
             MinimumSize = new Size(primary ? 152 : 112, 44),
             WaveSize = 0,
-            ForeColor = primary ? Color.White : Ink,
+            ForeColor = primary ? Color.White : danger ? Danger : Ink,
             Font = BodyFont,
             Padding = Padding.Empty,
             Radius = 14,

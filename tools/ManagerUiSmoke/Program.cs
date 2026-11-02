@@ -171,16 +171,27 @@ internal static class Program
             var scaleLabel = FindText(petsPage, "桌宠缩放");
             Require(scaleLabel is { Visible: true } && IsFullyVisible(scaleLabel),
                 "pets instance scale setting is visible after selecting an instance");
-            var scaleMode = Field(petsPage, "_scaleMode");
-            var scaleInput = Field(petsPage, "_scale");
+            var scaleEditor = Field(petsPage, "_scale");
+            var scaleMode = Field(scaleEditor, "_inherit");
+            var scaleInput = Field(scaleEditor, "_number");
             Require(IsFullyVisible((Control)scaleMode) && IsFullyVisible((Control)scaleInput),
                 "pets instance scale controls are fully visible after selecting an instance");
             var selectedId = (Guid)list.Items[0].Tag!;
-            SetProp(scaleMode, "SelectedIndex", 1);
+            SetProp(scaleMode, "Checked", false);
             SetProp(scaleInput, "Value", 0.7m);
             Require(Math.Abs((float)Prop(Call(host, "FindPet", selectedId)!, "ScaleOverride") - 0.7f) < 0.001f,
                 "pets page applies custom instance size through the host");
-            SetProp(scaleMode, "SelectedIndex", 0);
+            var otherRow = list.Items.Cast<ListViewItem>().First(row => (Guid)row.Tag! != selectedId);
+            ((Control)scaleInput).Focus();
+            otherRow.Selected = true;
+            Pump(30);
+            Require(Prop(Call(host, "FindPet", (Guid)otherRow.Tag!)!, "ScaleOverride") is null,
+                "binding another pet does not turn its inherited value into an override");
+            Require(Convert.ToDecimal(Prop(scaleInput, "Value")) == 1.8m, "inherited editor shows the latest global scale");
+            list.Items.Cast<ListViewItem>().Single(row => (Guid)row.Tag! == selectedId).Selected = true;
+            Pump(30);
+            Require(Convert.ToDecimal(Prop(scaleInput, "Value")) == 0.7m, "switching back restores the selected pet's custom value");
+            SetProp(scaleMode, "Checked", true);
             Require(Prop(Call(host, "FindPet", selectedId)!, "ScaleOverride") is null,
                 "pets page reset returns instance size to global inheritance");
             Console.WriteLine("INSTANCE_SCALE_UI selected=0.7 reset=PASS");
@@ -198,22 +209,30 @@ internal static class Program
             if (list.Items.Count > 0) list.Items[0].Selected = true;
             Pump(30);
             var pets = VisiblePage();
-            SetProp(Field(pets, "_jumpDesireMode"), "SelectedIndex", 1);
-            SetProp(Field(pets, "_jumpDesire"), "Value", 70m);
-            SetProp(Field(pets, "_climbDesireMode"), "SelectedIndex", 1);
-            SetProp(Field(pets, "_climbDesire"), "Value", 80m);
-            SetProp(Field(pets, "_windowJumpDesireMode"), "SelectedIndex", 1);
-            SetProp(Field(pets, "_windowJumpDesire"), "Value", 90m);
+            EditNumberOverride(pets, "_jumpDesire", 70m);
+            EditNumberOverride(pets, "_climbDesire", 80m);
+            EditNumberOverride(pets, "_windowJumpDesire", 90m);
+            EditNumberOverride(pets, "_activity", 2.3m);
+            EditNumberOverride(pets, "_scale", 0.7m);
+            SetProp(Field(pets, "_walkOverride"), "SelectedIndex", 1);
+            SetProp(Field(pets, "_dialogueOverride"), "SelectedIndex", 2);
             var behavior = Prop(Call(host, "FindPet", selectedId)!, "BehaviorOverrides");
             Require(Math.Abs((float)Prop(behavior, "JumpDesireOverride")! - 0.7f) < 0.001f, "pets page stores jump desire override");
             Require(Math.Abs((float)Prop(behavior, "ClimbDesireOverride")! - 0.8f) < 0.001f, "pets page stores climb desire override");
             Require(Math.Abs((float)Prop(behavior, "WindowJumpDesireOverride")! - 0.9f) < 0.001f, "pets page stores window jump desire override");
-            Require((bool)Call(host, "ResetPetBehaviorOverrides", selectedId)!, "reset clears desire overrides");
+            Pump(220);
+            ((IButtonControl)Field(pets, "_reset")).PerformClick();
             behavior = Prop(Call(host, "FindPet", selectedId)!, "BehaviorOverrides");
             Require(Prop(behavior, "JumpDesireOverride") is null && Prop(behavior, "ClimbDesireOverride") is null
-                && Prop(behavior, "WindowJumpDesireOverride") is null,
-                "reset returns desire overrides to global inheritance");
-            Console.WriteLine("INSTANCE_DESIRE_UI jump=70% climb=80% window=90% reset=PASS");
+                && Prop(behavior, "WindowJumpDesireOverride") is null && Prop(behavior, "ActivityRateOverride") is null
+                && Prop(Call(host, "FindPet", selectedId)!, "ScaleOverride") is null
+                && Convert.ToInt32(Prop(behavior, "WalkOverride")) == 0 && Convert.ToInt32(Prop(behavior, "DialogueOverride")) == 0,
+                "reset button restores behavior and scale together");
+            foreach (var field in new[] { "_scale", "_activity", "_jumpDesire", "_climbDesire", "_windowJumpDesire" })
+                Require((bool)Prop(Field(Field(pets, field), "_inherit"), "Checked"), "reset immediately updates the inheritance UI: " + field);
+            Require(Convert.ToDecimal(Prop(Field(Field(pets, "_scale"), "_number"), "Value")) == 1.8m,
+                "reset immediately displays the global scale");
+            Console.WriteLine("INSTANCE_OVERRIDE_UI inheritance_target_switch_all_reset=PASS");
             var runtime = Descendants(manager).OfType<Label>().First(label => label.Visible && label.Text.StartsWith("状态：", StringComparison.Ordinal));
             var runtimeBefore = runtime.Text;
             Pump(500);
@@ -229,12 +248,32 @@ internal static class Program
                 target.EnsureVisible();
                 var id = (Guid)target.Tag!;
                 Console.WriteLine($"DELETE step={step} count={list.Items.Count} index={index} id={id}");
-                ((IButtonControl)ButtonControls(manager).Single(b => b.Text == "删除选中")).PerformClick();
+                ((IButtonControl)ButtonControls(manager).Single(b => b.Text == "移除桌宠")).PerformClick();
                 Pump(30);
                 Require(Call(host, "FindPet", id) is null, "deleted target id");
                 Require(list.Items.Count == (int)Prop(host, "ActivePetCount"), "list/core counts");
             }
             Console.WriteLine("PASS mixed head/middle/tail deletion");
+            Require(!((Control)Field(VisiblePage(), "_detailBody")).Visible
+                && !((Control)Field(VisiblePage(), "_footer")).Visible, "empty selection hides stale settings and actions");
+
+            Page("Characters");
+            var rolePage = VisiblePage();
+            var roleList = Descendants(rolePage).OfType<ListView>().Single();
+            var originalDefault = (string)Prop(host, "SelectedRoleId");
+            var previewRow = roleList.Items.Cast<ListViewItem>().First(row => row.SubItems[1].Text != originalDefault);
+            var previewRole = previewRow.SubItems[1].Text;
+            previewRow.Selected = true;
+            Pump(30);
+            ((IButtonControl)Field(rolePage, "_refresh")).PerformClick();
+            Pump(40);
+            Require(roleList.SelectedItems.Count == 1 && roleList.SelectedItems[0].SubItems[1].Text == previewRole
+                && (string)Prop(host, "SelectedRoleId") == originalDefault, "refresh preserves a non-default preview without changing the default");
+            ((IButtonControl)Field(rolePage, "_setDefault")).PerformClick();
+            Pump(40);
+            Require((string)Prop(host, "SelectedRoleId") == previewRole && roleList.SelectedItems[0].SubItems[1].Text == previewRole,
+                "set default applies the previewed role and preserves selection");
+            Console.WriteLine("ROLE_ACTIONS refresh_preview_selection_set_default=PASS");
             // Make only this smoke's temporary settings target unwritable,
             // then verify that a save failure is discoverable on another page.
             Page("Interactions");
@@ -374,6 +413,12 @@ internal static class Program
     static object? Property(object obj, string name) => obj.GetType().GetProperty(name, Flags)!.GetValue(obj);
     static void SetProp(object obj, string name, object value) => obj.GetType().GetProperty(name, Flags)!.SetValue(obj, value);
     static object Field(object obj, string name) => obj.GetType().GetField(name, Flags)!.GetValue(obj)!;
+    static void EditNumberOverride(object page, string field, decimal value)
+    {
+        var editor = Field(page, field);
+        SetProp(Field(editor, "_inherit"), "Checked", false);
+        SetProp(Field(editor, "_number"), "Value", value);
+    }
     static object? Call(object obj, string name, params object[] args) => obj.GetType().GetMethod(name, Flags)!.Invoke(obj, args);
     static void CopyCharacterFixture(string role, string destinationRoot)
     {
@@ -466,6 +511,10 @@ internal static class Program
         }
         if (name == "Pets")
         {
+            var footer = (Control)Field(page, "_footer");
+            if (footer.Visible)
+                foreach (var action in Descendants(footer).Where(control => control is IButtonControl))
+                    Require(IsFullyVisible(action), "pet actions remain visible without scrolling: " + action.Text);
             Require(FindText(page, "桌宠缩放") is { Visible: true }, "pets exposes per-instance size setting");
             Require(Descendants(page).Any(control => control.GetType().Name == "Select"), "pets uses AntdUI scale source select");
             Require(Descendants(page).Any(control => control.GetType().Name == "InputNumber" &&

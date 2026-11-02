@@ -1,3 +1,21 @@
+# 2026-11-03 UI 功能组件审查、共享控件与页面重构
+
+**基线与范围**：`9d057ba`，工作区开始时干净。用户要求检查按钮及所属功能组件是否需要重构，并统一可复用 UI。审查快照与复现入口见 [UI-01–05](reviews/2026-11-03-ui-components.md)，设计与页面图见 [UI_DESIGN](UI_DESIGN.md)。
+
+**① 代码已实现**：修复“恢复默认”遗漏单只缩放，新增 AppHost.ResetPetOverrides 组合现有行为 / 缩放重置，保留原局部 API；操作后立即重新采样，不用旧投影更新新设置。角色刷新按 ID 保留当前预览与首行，列表同步显示名和默认标记。五组数值改用 NumberOverrideEditor，统一全局继承、百分比换算、静默绑定与焦点 / 目标切换；SettingRows 供单只与全局共用，UiLayout 供内容栈 / 操作行 / 列表详情分栏共用，ThemedListView 统一列配置，UiTheme 统一按钮图标 / 可访问名称 / 移除样式。
+
+桌宠详情重排为横向身份区、参数行、固定底部操作栏；无选择隐藏旧设置，喂食仅在发呆 / 走动时可用并显示操作结果，恢复默认只在有覆盖时可用，移除使用独立样式。角色刷新移至页头，预览下保留设默认。首页清空操作采用同一移除样式。保留简短欢迎语、粉白圆角布局和角色原帧；Core、PNG、动画、设置 schema 和 Win32 声明未改，无新增依赖或 AI 绘画。
+
+**② 构建通过**：ManagerUiSmoke 与 DesktopInputSmoke 构建 0 警告 / 0 错误。`scripts/build-yimywalk.ps1 -PublishPath artifacts/ui-components-20261103/publish` 和 `scripts/test-release-package.ps1 -Path artifacts/ui-components-20261103/publish` 实跑通过，`PACKAGE PASS VERSION=0.3.1 FILES=15 CHECKSUMS=14`。本地 ZIP：`artifacts/ui-components-20261103/YimyWalk-0.3.1-ui-components-win-x64.zip`，SHA-256 `377564054A7250D3AA17AF4022E346D64686A8E130427230AD8A8380BB855282`。保持 0.3.1 预览，正式 Release / 标签未改。
+
+**③ Core 测试通过**：`scripts/test-yimywalk.ps1` 与发布流程实跑 Core **187** / App **24**，0 失败、0 跳过。未为纯样式添加镜像测试；新增有意义的 UI 回归覆盖实际修复行为。
+
+**④ Windows 桌面已验证（本次范围）**：单屏 2560×1600、144 DPI / 150%。完整 ManagerUiSmoke 输出 `INSTANCE_OVERRIDE_UI inheritance_target_switch_all_reset=PASS`、`ROLE_ACTIONS refresh_preview_selection_set_default=PASS` 与 `SAVE_FAILURE notice_navigation_retry=PASS`；覆盖编辑缩放 / 活跃度 / 三种倾向 / 两个行为开关、切换目标不串写、实际重置按钮同时恢复宿主与控件、空选择、连续移除、刷新非默认预览再设默认。`--visual-review --output artifacts/ui-components-20261103` 五页默认 1680×1140 / 最小 1440×960 布局与固定操作栏检查通过，已查看桌宠 / 角色页实图。独立 `scripts/desktop-input-smoke.ps1` 输出 `MANAGER FRAME_REAL_DRAG_RESIZE=PASS`、`MANAGER REFRESH_BUTTON=PASS`、`RESULT PASS`，真实鼠标窗口操作、开关、食物、拖拽、穿透 / 焦点、托盘及退出通过。
+
+**Windows 桌面未验证**：多屏、真实跨屏 DPI、OS 缩放切换、拔插 / 睡眠和长时压力。UI 布局与截图不替代这些验收。
+
+证据：`artifacts/ui-components-20261103/` 的 `build.log`、`tests.log`、`full-ui.log`、`visual-review.log`、`input-smoke.log`、`publish.log`、`package.log` 和五页 PNG。测试使用隔离角色 / 设置目录。已同步当前记忆、索引、设计、测试入口与页面截图；按既有授权提交并正常推送维护分支，发布包及日志不纳入 Git。
+
 # 2026-11-03 恢复简短欢迎语与可爱布局
 
 **基线与原因**：接续 `bbc754b`。用户纠正了上一轮过度精简：要减少啰嗦，不是删掉所有欢迎语或可爱设计。已更正 MAINTENANCE 与 UI_DESIGN 中过于绝对的文案规则。

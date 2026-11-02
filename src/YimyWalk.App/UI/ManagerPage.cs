@@ -34,17 +34,7 @@ internal abstract class ManagerPage : UserControl
 
     protected TableLayoutPanel CreateRootLayout()
     {
-        var layout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 1,
-            RowCount = 0,
-            Padding = Padding.Empty,
-            GrowStyle = TableLayoutPanelGrowStyle.AddRows
-        };
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        var layout = UiLayout.Stack();
         Controls.Add(layout);
         return layout;
     }
@@ -98,8 +88,6 @@ internal abstract class ManagerPage : UserControl
 
     protected void AddRow(TableLayoutPanel layout, Control control)
     {
-        control.Dock = DockStyle.Top;
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.Controls.Add(control, 0, layout.RowCount++);
+        UiLayout.AddRow(layout, control);
     }
 }

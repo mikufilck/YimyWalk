@@ -2,6 +2,8 @@
 
 最近调整：2026-11-03。用户明确纠正：精简啰嗦文案，不是删除所有欢迎语或牺牲可爱设计。保持咿米的粉白风格、角色展示与布局层次，欢迎语简短自然，功能说明直白。当前首页见 [实际渲染图](assets/ui-overview.png)。
 
+组件审查与重构见 [UI-01–05](reviews/2026-11-03-ui-components.md)；重排后的 [桌宠详情](assets/ui-pets.png) 与 [角色页](assets/ui-characters.png) 均来自隔离测试的应用渲染。
+
 ## 文案与布局
 
 - 首页保留一句“欢迎回来！”。不再叠加多句口号或长篇陪伴描述；按钮直接写动作，例如“创建桌宠”“投放食物”“刷新角色”。
@@ -13,8 +15,8 @@
 | 页面 | 内容 |
 | --- | --- |
 | 总览 | 简短欢迎语、粉色创建区：左侧默认角色 / 数量 / 创建，右侧原帧预览；下方白色圆角操作区容纳喂食、食物、暂停、隐藏 / 显示和清空 |
-| 桌宠 | 左侧列表，右侧单只桌宠状态、预览与设置。数值直接显示在编辑器里；走动 / 气泡保留必要的全局状态与暂停提示 |
-| 角色 | 左侧名称 / ID / 默认角色列表，右侧预览与刷新 / 设为默认操作；删除恒定的“可用”列与重复列表标题 |
+| 桌宠 | 左侧列表，右侧横向角色 / 状态区与统一参数行；五组数值用“跟随全局”开关 + 数值框。喂食 / 恢复默认 / 移除固定在详情底部，恢复默认同时重置缩放 |
+| 角色 | 左侧名称 / ID / 默认角色列表；页头刷新，右侧名称、预览与设为默认。刷新保留正在预览的角色，不自动把预览当作默认设置 |
 | 互动 | 开关与数值两栏，不再嵌套分组卡片；总开关影响全部桌宠的说明保留 |
 | 设置 | 缩放、显示器、窗口落脚直接排成设置行，下方显示保存状态及必要诊断 |
 
@@ -26,10 +28,12 @@
 
 ## 维护入口
 
-- `UiTheme`：颜色、字体、间距与控件工厂。按钮的实际尺寸提供留白，AntdUI Padding 不用于扩大按钮。
+- `UiTheme`：颜色、字体、间距与控件工厂；按钮在同一入口设置图标、可访问名称和移除样式。按钮的实际尺寸提供留白，AntdUI Padding 不用于扩大按钮。
 - `UiCard`：欢迎区 / 操作区 / 列表详情面板的圆角与细边，可选装饰虚线；使用原生 Padding 布局子控件。
-- `UiMotifs`：内置 SVG 图标与代码绘制的小狗爪；`ThemedListView`：原生列表选择 / 键盘行为与表头配色。
-- `SettingRows`：标签 / 必要说明与编辑器分栏；不创建空说明行。
+- `UiMotifs`：内置 SVG 图标与代码绘制的小狗爪；`ThemedListView`：原生列表选择 / 键盘行为、列宽配置与表头配色。
+- `SettingRows`：全局 / 单只共用的设置行，标签 / 说明 / 可选状态与编辑器分栏；不创建空说明行。
+- `NumberOverrideEditor`：五组单只数值共用的组合控件，统一继承、显示换算与绑定；周期刷新不打断编辑，切换目标必须更新数值，绑定本身不写宿主。
+- `UiLayout`：内容栈、流式操作行与列表 / 详情布局；避免各页手工复制分栏和逆序 Dock.Top。
 - `ManagerPage`：按实际标题 / 说明高度布局。`ManagerForm.SelectPage` 在最终布局后重算滚动范围，避免初次窄宽度测量残留空滚动条。
 - `ManagerChrome` / `CompanionMenuRenderer`：窗口操作与托盘菜单。Win32 声明仍集中于 NativeMethods，关闭回托盘。
 - `CharacterFramePreview`：预览持有并释放 SurfaceLease；删除的装饰控件 `CompanionArt` 不再嵌入图标位图。
@@ -40,7 +44,7 @@
 
 ```powershell
 .\.tools\dotnet\dotnet.exe build tools/ManagerUiSmoke/ManagerUiSmoke.csproj -c Release -p:Platform=x64
-.\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe --visual-review --output artifacts/ui-balance-20261103
+.\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe --visual-review --output artifacts/ui-components-20261103
 .\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe --baseline
 .\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe
 .\tools\ManagerUiSmoke\bin\x64\Release\net8.0-windows\ManagerUiSmoke.exe --preview-pixels

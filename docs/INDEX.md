@@ -132,7 +132,9 @@ graph TD
 | `UI/ManagerPage.cs` | 页面基类与标题布局辅助、标题狗爪点缀；说明文字可省略，不保留空白高度 |
 | `UI/UiTheme.cs` | 颜色/字体/间距常量 + AntdUI 控件工厂 |
 | `UI/Controls/UiCard.cs` / `UiMotifs.cs` | 欢迎区 / 操作区 / 列表详情圆角面板、可选装饰边、狗爪几何与内置 SVG 图标；布局 Padding 与绘制分开 |
-| `UI/Controls/ThemedListView.cs` | 自绘列表表头 / 选中行；资源由控件释放 |
+| `UI/Controls/ThemedListView.cs` | 统一列表配置与比例列宽，自绘表头 / 选中行；资源由控件释放 |
+| `UI/Controls/NumberOverrideEditor.cs` | 单只数值覆盖：跟随全局开关 + 数值框，静默绑定 / 百分比换算 / 焦点与目标切换 |
+| `UI/Controls/UiLayout.cs` | 共享内容栈、流式操作行与列表 / 详情分栏；页面只提供内容 |
 | `UI/Controls/SettingRows.cs` / `ManagerChrome.cs` / `CompanionMenuRenderer.cs` | 设置行、自定义窗口操作与托盘菜单配色 |
 | `UI/TrayIconHost.cs` | `NotifyIcon` + 右键菜单（打开管理器 / 隐藏 / 显示 / 清空 / 退出） |
 | `UI/AppIcon.cs` | 读取嵌入资源 `yimywalk.ico`（EXE / 管理窗口 / 托盘图标三处一致） |
@@ -140,8 +142,8 @@ graph TD
 | `UI/InstanceSettingState.cs` | 生成走动 / 气泡的全局开关状态及暂停提示；数值设置不重复显示来源与数值 |
 | `UI/Controls/CharacterFramePreview.cs` | 单帧 idle(index 0) 静态预览（按原分辨率取帧 + NearestNeighbor） |
 | `UI/Pages/OverviewPage.cs` | 总览：简短欢迎语与粉色创建区，运行计数、默认角色原帧、数量 1/10/50/100 + 创建按钮；白色操作区 |
-| `UI/Pages/PetsPage.cs` | 桌宠：列表 + 单实例覆盖（走动/气泡/活跃度/缩放/三种欲望） |
-| `UI/Pages/CharactersPage.cs` | 角色：列表、详情、idle 预览、刷新角色、设为下次创建默认角色 |
+| `UI/Pages/PetsPage.cs` | 桌宠：列表、身份 / 状态区、统一单只设置与固定操作栏；恢复默认包含缩放 |
+| `UI/Pages/CharactersPage.cs` | 角色：列表、详情、idle 预览；页头刷新保留预览选择，预览下设为默认 |
 | `UI/Pages/InteractionsPage.cs` | 互动：全局默认（走动/气泡/饥饿/外部反馈/活跃度）+ 气泡总闸（优先级为运行级，设置实际会持久化） |
 | `UI/Pages/SettingsPage.cs` | 设置：全局缩放、首选显示器、窗口顶部落脚、保存状态与重试 |
 | `Resources/` | `yimywalk.ico`、`icon_yimy.png`、`logo.png`；`Dialogue/yimy-bubble.png` 为嵌入的咿米气泡原画 |
@@ -228,6 +230,7 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | --- | --- | --- |
 | `docs/PROJECT_SPEC.md` | **用户原始需求全文**（M0–M4 分阶段） | 需求有疑问时读；**不要按实现进度改写它** |
 | `docs/reviews/2026-11-01-remediation.md` | R01–R13 的修正、测试与硬件未验证边界 | 本轮处置详细落点；后续行为变更仍写 STATUS |
+| `docs/reviews/2026-11-03-ui-components.md` | UI-01–05：重置遗漏、刷新选择丢失、共享编辑器 / 设置行 / 布局 / 列表与操作栏 | 改按钮及 UI 功能组件时按 ID 复核 |
 | `docs/MAINTENANCE.md` | **当前维护记忆**，可更新短摘要 | 快速接手，查看当前有效行为、四档状态、下一项任务；与 STATUS 同步 |
 | `docs/reviews/2026-11-01-project-review.md` | **本轮审查快照**：覆盖范围、实跑、四项沙盒复现、R01–R13 待办、旧评审纠正 | 处理稳定性问题时按 ID 定位；修复后在 STATUS 登记 |
 | `docs/INDEX.md`（本页） | 结构索引 | 定位代码/脚本/文档；结构变动时同步 |
@@ -235,7 +238,7 @@ Core 新增 `MaintenanceRegressionTests.cs`（租约 / 扫描事务 / 无聊 / �
 | `docs/ARCHITECTURE.md` | 当前分层决策、真实类型和资源边界 | 决定代码该放哪一层时读 |
 | `docs/CHARACTER_FORMAT.md` | 角色包格式的**对外契约**（supported / planned 已区分） | 改角色格式或写文档时读 |
 | `docs/TESTING.md` | 验收入口与 Windows 桌面验收矩阵 | 决定"怎么算通过"时读 |
-| `docs/UI_DESIGN.md` / `docs/assets/ui-overview.png` | 管理器的文案 / 布局约定、组件地图、实际首页与复核入口 | 改管理器、标题栏、菜单或设计样式时读 |
+| `docs/UI_DESIGN.md` / `docs/assets/ui-overview.png`、`ui-pets.png`、`ui-characters.png` | 管理器的文案 / 布局约定、组件地图、实际页面与复核入口 | 改管理器、标题栏、菜单或设计样式时读 |
 | `docs/YIMY_VISUAL_STYLE.md` / `docs/artwork/yimy-bubble-prompt.txt` | 咿米主题、气泡原画来源 / hash / 提示词、切图与复核入口 | 改气泡外观或替换皮肤时读 |
 | `docs/UPSTREAM_AUDIT.md` | eSheep 上游审计结论（固定提交、许可、代码路径） | 需要复核上游时读；**在仓库外取源码** |
 | `docs/assets/*.png` | 可重复生成的预览/参考图 | 改角色格式文档配图 |

@@ -7,40 +7,27 @@ namespace YimyWalk.App.UI.Pages;
 internal sealed class PetsPage : ManagerPage
 {
     private readonly PetListProjection _projection = new();
-    private readonly ListView _list = new ThemedListView()
-    {
-        Dock = DockStyle.Fill,
-        View = View.Details,
-        FullRowSelect = true,
-        HideSelection = false,
-        MultiSelect = false,
-        HeaderStyle = ColumnHeaderStyle.Nonclickable,
-        BorderStyle = BorderStyle.None,
-        TabStop = true
-    };
-    private readonly Label _empty = UiTheme.CreateBodyLabel("当前没有运行中的桌宠。");
+    private readonly ThemedListView _list = new();
+    private readonly Label _empty = UiTheme.CreateMutedLabel("当前没有运行中的桌宠。");
+    private readonly Label _emptyDetail = UiTheme.CreateBodyLabel("从左侧选择桌宠，调整它的设置。");
     private readonly Label _detailTitle = UiTheme.CreateBodyLabel();
     private readonly Label _detailMeta = UiTheme.CreateMutedLabel();
     private readonly Label _runtime = UiTheme.CreateBodyLabel();
     private readonly Label _operation = UiTheme.CreateMutedLabel();
-    private readonly Label _saveNote = UiTheme.CreateMutedLabel("单只桌宠的设置重启后恢复默认。");
     private readonly Label _walkSource = UiTheme.CreateMutedLabel();
     private readonly Label _dialogueSource = UiTheme.CreateMutedLabel();
-    private readonly AntdUI.Select _walkOverride = CreateOverrideCombo();
-    private readonly AntdUI.Select _dialogueOverride = CreateOverrideCombo();
-    private readonly AntdUI.Select _activityMode = UiTheme.CreateSelect(120);
-    private readonly AntdUI.InputNumber _activityRate = UiTheme.CreateInputNumber(0.1m, 4m, 0.1m, 1, 90);
-    private readonly AntdUI.Select _scaleMode = UiTheme.CreateSelect(120);
-    private readonly AntdUI.InputNumber _scale = UiTheme.CreateInputNumber(0.1m, 8m, 0.1m, 1, 90);
-    private readonly AntdUI.Select _jumpDesireMode = UiTheme.CreateSelect(120);
-    private readonly AntdUI.InputNumber _jumpDesire = UiTheme.CreateInputNumber(0m, 100m, 1m, 0, 90);
-    private readonly AntdUI.Select _climbDesireMode = UiTheme.CreateSelect(120);
-    private readonly AntdUI.InputNumber _climbDesire = UiTheme.CreateInputNumber(0m, 100m, 1m, 0, 90);
-    private readonly AntdUI.Select _windowJumpDesireMode = UiTheme.CreateSelect(120);
-    private readonly AntdUI.InputNumber _windowJumpDesire = UiTheme.CreateInputNumber(0m, 100m, 1m, 0, 90);
-    private readonly AntdUI.Button _remove = UiTheme.CreateButton("删除选中");
-    private readonly AntdUI.Button _feed = UiTheme.CreateButton("喂食");
-    private readonly AntdUI.Button _reset = UiTheme.CreateButton("恢复默认");
+    private readonly AntdUI.Select _walkOverride = UiTheme.CreateSelect(150);
+    private readonly AntdUI.Select _dialogueOverride = UiTheme.CreateSelect(150);
+    private readonly NumberOverrideEditor _activity = new(0.1m, 4m, 0.1m, 1);
+    private readonly NumberOverrideEditor _scale = new(0.1m, 8m, 0.1m, 1);
+    private readonly NumberOverrideEditor _jumpDesire = new(0m, 100m, 1m, 0, 100);
+    private readonly NumberOverrideEditor _climbDesire = new(0m, 100m, 1m, 0, 100);
+    private readonly NumberOverrideEditor _windowJumpDesire = new(0m, 100m, 1m, 0, 100);
+    private readonly AntdUI.Button _remove = UiTheme.CreateButton("移除桌宠", icon: "trash", danger: true);
+    private readonly AntdUI.Button _feed = UiTheme.CreateButton("喂食", primary: true, icon: "bone");
+    private readonly AntdUI.Button _reset = UiTheme.CreateButton("恢复默认", icon: "reset");
+    private readonly Panel _detailBody = new() { Dock = DockStyle.Fill, AutoScroll = true };
+    private readonly TableLayoutPanel _footer = UiLayout.Stack();
     private readonly CharacterFramePreview _preview;
     private Guid? _editingId;
     private bool _syncing;
@@ -48,74 +35,48 @@ internal sealed class PetsPage : ManagerPage
 
     public PetsPage(AppHost host) : base(host)
     {
-        _preview = new CharacterFramePreview(host.SurfaceCache) { Anchor = AnchorStyles.Top | AnchorStyles.Right };
-        _list.Columns.Add("编号", 90);
-        _list.Columns.Add("角色", 110);
-        _list.Columns.Add("状态", 80);
-        _list.SizeChanged += (_, _) =>
-        {
-            var widths = new[] { .28, .45, .27 };
-            for (var i = 0; i < 3; i++) _list.Columns[i].Width = Math.Max(48, (int)((_list.ClientSize.Width - 6) * widths[i]));
-        };
-        _activityMode.Items.AddRange(new object[] { "跟随全局", "自定义" });
-        _activityMode.SelectedIndex = 0;
-        _scaleMode.Items.AddRange(new object[] { "跟随全局", "自定义" });
-        _scaleMode.SelectedIndex = 0;
-        _jumpDesireMode.Items.AddRange(new object[] { "跟随全局", "自定义" });
-        _jumpDesireMode.SelectedIndex = 0;
-        _climbDesireMode.Items.AddRange(new object[] { "跟随全局", "自定义" });
-        _climbDesireMode.SelectedIndex = 0;
-        _windowJumpDesireMode.Items.AddRange(new object[] { "跟随全局", "自定义" });
-        _windowJumpDesireMode.SelectedIndex = 0;
+        _preview = new CharacterFramePreview(host.SurfaceCache) { Dock = DockStyle.Fill };
+        _list.SetColumns(("编号", .36f), ("角色", .4f), ("状态", .24f));
         _walkOverride.Items.AddRange(new object[] { "跟随全局", "开启", "关闭" });
         _dialogueOverride.Items.AddRange(new object[] { "跟随全局", "开启", "关闭" });
-
         var layout = CreateRootLayout();
-        // The page heading is content-sized; the list/detail split must take
-        // the remaining page height instead of staying at its 430px minimum.
-        layout.Dock = DockStyle.Fill;
-        layout.AutoSize = false;
         AddHeading(layout, "桌宠");
-        var split = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, MinimumSize = new Size(0, 430), ColumnCount = 2, RowCount = 1 };
-        split.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
-        split.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58));
-
         var listCard = UiTheme.CreateCard();
-        listCard.Dock = DockStyle.Fill;
-        listCard.MinimumSize = new Size(0, 380);
-        listCard.AutoSize = false;
-        listCard.Controls.Add(_list);
-        listCard.Controls.Add(_empty);
+        listCard.Controls.Add(_list); listCard.Controls.Add(_empty);
         _empty.Dock = DockStyle.Bottom;
-        split.Controls.Add(listCard, 0, 0);
-
-        var detail = BuildDetailPanel();
-        split.Controls.Add(detail, 1, 0);
-        AddRow(layout, split);
-        split.Dock = DockStyle.Fill;
-        layout.RowStyles[layout.RowCount - 1] = new RowStyle(SizeType.Percent, 100f);
+        UiLayout.ListDetail(layout, listCard, BuildDetailPanel());
 
         _list.SelectedIndexChanged += (_, _) => SelectFromList();
         _walkOverride.SelectedIndexChanged += (_, _) => ApplyBooleanOverride(isWalk: true);
         _dialogueOverride.SelectedIndexChanged += (_, _) => ApplyBooleanOverride(isWalk: false);
-        _activityMode.SelectedIndexChanged += (_, _) => ApplyActivityOverride();
-        _activityRate.ValueChanged += (_, _) => ApplyActivityOverride();
-        _scaleMode.SelectedIndexChanged += (_, _) => ApplyScaleOverride();
-        _scale.ValueChanged += (_, _) => ApplyScaleOverride();
-        _jumpDesireMode.SelectedIndexChanged += (_, _) => ApplyDesireOverride(isJump: true);
-        _jumpDesire.ValueChanged += (_, _) => ApplyDesireOverride(isJump: true);
-        _climbDesireMode.SelectedIndexChanged += (_, _) => ApplyDesireOverride(isJump: false);
-        _climbDesire.ValueChanged += (_, _) => ApplyDesireOverride(isJump: false);
-        _windowJumpDesireMode.SelectedIndexChanged += (_, _) => ApplyWindowJumpDesireOverride();
-        _windowJumpDesire.ValueChanged += (_, _) => ApplyWindowJumpDesireOverride();
-        _remove.Click += (_, _) =>
+        _activity.ValueChanged += (_, _) => ApplyBehaviorChange(current => current with { ActivityRateOverride = _activity.OverrideValue });
+        _jumpDesire.ValueChanged += (_, _) => ApplyBehaviorChange(current => current with { JumpDesireOverride = _jumpDesire.OverrideValue });
+        _climbDesire.ValueChanged += (_, _) => ApplyBehaviorChange(current => current with { ClimbDesireOverride = _climbDesire.OverrideValue });
+        _windowJumpDesire.ValueChanged += (_, _) => ApplyBehaviorChange(current => current with { WindowJumpDesireOverride = _windowJumpDesire.OverrideValue });
+        _scale.ValueChanged += (_, _) =>
         {
-            if (_editingId is not { } id) return;
-            _operation.Text = Host.RemovePet(id) ? "已删除。" : "桌宠已不存在。";
+            if (_syncing || _editingId is not { } id) return;
+            Host.SetPetScaleOverride(id, _scale.OverrideValue);
             RefreshFromHost();
         };
-        _feed.Click += (_, _) => { if (_editingId is { } id) Host.FeedPet(id); };
-        _reset.Click += (_, _) => { if (_editingId is { } id) Host.ResetPetBehaviorOverrides(id); RefreshFromHost(); };
+        _remove.Click += (_, _) =>
+        {
+            if (_editingId is { } id) Host.RemovePet(id);
+            RefreshFromHost();
+        };
+        _feed.Click += (_, _) =>
+        {
+            if (_editingId is not { } id) return;
+            SetOperation(Host.FeedPet(id) ? "已喂食。" : "当前动作无法喂食。");
+            RefreshFromHost();
+        };
+        _reset.Click += (_, _) =>
+        {
+            if (_editingId is not { } id) return;
+            Host.ResetPetOverrides(id);
+            RefreshFromHost();
+            SetOperation("已恢复为全局设置。");
+        };
     }
 
     public override string PageTitle => "桌宠";
@@ -131,91 +92,47 @@ internal sealed class PetsPage : ManagerPage
     private UiCard BuildDetailPanel()
     {
         var panel = UiTheme.CreateCard();
-        panel.Dock = DockStyle.Fill;
-        panel.AutoScroll = true;
-        panel.MinimumSize = new Size(0, 380);
-
-        _detailTitle.Dock = DockStyle.Top;
+        var content = UiLayout.Stack();
+        var summary = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top, Height = LogicalToDeviceUnits(118),
+            ColumnCount = 2, RowCount = 1, BackColor = UiTheme.Preview,
+            Margin = new Padding(0, 0, 0, 14), Padding = new Padding(8)
+        };
+        summary.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LogicalToDeviceUnits(110)));
+        summary.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        summary.Controls.Add(_preview, 0, 0);
+        var identity = UiLayout.Stack(); identity.Margin = new Padding(12, 10, 0, 0);
         _detailTitle.Font = UiTheme.SectionFont;
-        _detailMeta.Dock = DockStyle.Top;
-        _runtime.Dock = DockStyle.Top;
-        _saveNote.Dock = DockStyle.Top;
-        _operation.Dock = DockStyle.Top;
-        // Keep the idle1 preview useful while leaving the first instance-size
-        // row visible at the normal 1120x720 window size. Smaller windows can
-        // still scroll the card for the action buttons below the settings.
-        var previewRow = new Panel { Dock = DockStyle.Top, Height = 128, Padding = new Padding(0, 0, 0, UiTheme.Space8) };
-        _preview.Dock = DockStyle.Left;
-        previewRow.Controls.Add(_preview);
-        var settings = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 0, Padding = new Padding(0, UiTheme.Space8, 0, 0) };
-        settings.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
-        settings.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
-        AddSettingRow(settings, "主动走动", _walkOverride, _walkSource);
-        AddSettingRow(settings, "自动气泡", _dialogueOverride, _dialogueSource);
-        var activityEditors = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Margin = Padding.Empty };
-        activityEditors.Controls.Add(_activityMode);
-        activityEditors.Controls.Add(_activityRate);
-        AddSettingRow(settings, "活跃度倍率", activityEditors);
-        var scaleEditors = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Margin = Padding.Empty };
-        scaleEditors.Controls.Add(_scaleMode);
-        scaleEditors.Controls.Add(_scale);
-        AddSettingRow(settings, "桌宠缩放", scaleEditors);
-        var jumpDesireEditors = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Margin = Padding.Empty };
-        jumpDesireEditors.Controls.Add(_jumpDesireMode);
-        jumpDesireEditors.Controls.Add(_jumpDesire);
-        AddSettingRow(settings, "跳跃倾向 (%)", jumpDesireEditors);
-        var climbDesireEditors = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Margin = Padding.Empty };
-        climbDesireEditors.Controls.Add(_climbDesireMode);
-        climbDesireEditors.Controls.Add(_climbDesire);
-        AddSettingRow(settings, "攀爬倾向 (%)", climbDesireEditors);
-        var windowJumpDesireEditors = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Margin = Padding.Empty };
-        windowJumpDesireEditors.Controls.Add(_windowJumpDesireMode);
-        windowJumpDesireEditors.Controls.Add(_windowJumpDesire);
-        AddSettingRow(settings, "窗口跳跃倾向 (%)", windowJumpDesireEditors);
-        var actions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(0, UiTheme.Space12, 0, 0) };
-        actions.Controls.Add(_feed);
-        actions.Controls.Add(_reset);
-        actions.Controls.Add(_remove);
-        // Dock.Top lays out the most recently added control first. Add the
-        // detail sections in reverse visual order so the title remains at the
-        // top and actions stay below the settings.
-        panel.Controls.Add(_operation);
-        panel.Controls.Add(actions);
-        panel.Controls.Add(_saveNote);
-        panel.Controls.Add(settings);
-        panel.Controls.Add(previewRow);
-        panel.Controls.Add(_runtime);
-        panel.Controls.Add(_detailMeta);
-        panel.Controls.Add(_detailTitle);
-        panel.SizeChanged += (_, _) =>
+        UiLayout.AddRow(identity, _detailTitle); UiLayout.AddRow(identity, _detailMeta); UiLayout.AddRow(identity, _runtime);
+        identity.SizeChanged += (_, _) =>
         {
-            var width = Math.Max(1, panel.ClientSize.Width - panel.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth);
-            foreach (var label in new[] { _detailTitle, _detailMeta, _runtime, _saveNote, _operation })
-                label.MaximumSize = new Size(width, 0);
+            foreach (var label in new[] { _detailTitle, _detailMeta, _runtime })
+                label.MaximumSize = new Size(Math.Max(1, identity.ClientSize.Width), 0);
         };
-        settings.SizeChanged += (_, _) =>
-        {
-            foreach (var label in settings.Controls.OfType<Label>())
-            {
-                var fraction = settings.GetColumn(label) == 0 ? .45 : .55;
-                label.MaximumSize = new Size(Math.Max(1, (int)(settings.ClientSize.Width * fraction) - label.Margin.Horizontal), 0);
-            }
-        };
+        summary.Controls.Add(identity, 1, 0); UiLayout.AddRow(content, summary);
+        var settings = new SettingRows(280);
+        settings.Add("主动走动", "", _walkOverride, _walkSource);
+        settings.Add("自动气泡", "", _dialogueOverride, _dialogueSource);
+        settings.Add("桌宠缩放", "", _scale);
+        settings.Add("活跃度倍率", "", _activity);
+        settings.Add("跳跃倾向 (%)", "", _jumpDesire);
+        settings.Add("攀爬倾向 (%)", "", _climbDesire);
+        settings.Add("窗口跳跃倾向 (%)", "", _windowJumpDesire);
+        UiLayout.AddRow(content, settings);
+        var saveNote = UiTheme.CreateMutedLabel("单只桌宠的设置重启后恢复默认。");
+        UiLayout.AddRow(content, saveNote);
+        content.SizeChanged += (_, _) => saveNote.MaximumSize = new Size(Math.Max(1, content.Width - 8), 0);
+        _detailBody.Controls.Add(content);
+        var actions = UiLayout.Flow();
+        actions.Padding = new Padding(0, 12, 0, 0);
+        actions.Controls.Add(_feed); actions.Controls.Add(_reset); actions.Controls.Add(_remove);
+        _operation.Visible = false;
+        UiLayout.AddRow(_footer, _operation); UiLayout.AddRow(_footer, actions);
+        _footer.Dock = DockStyle.Bottom;
+        _emptyDetail.Dock = DockStyle.Top;
+        panel.Controls.Add(_detailBody); panel.Controls.Add(_emptyDetail); panel.Controls.Add(_footer);
         return panel;
-    }
-
-    private static void AddSettingRow(TableLayoutPanel table, string label, Control editor, Label? source = null)
-    {
-        var row = table.RowCount++;
-        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        table.Controls.Add(UiTheme.CreateBodyLabel(label), 0, row);
-        table.Controls.Add(editor, 1, row);
-        if (source is not null)
-        {
-            table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            table.Controls.Add(source, 1, row + 1);
-        }
     }
 
     private void ApplyProjectionToList()
@@ -300,112 +217,54 @@ internal sealed class PetsPage : ManagerPage
         var pet = _projection.Items.FirstOrDefault(item => item.InstanceId == _projection.SelectedInstanceId);
         var changedTarget = _editingId != pet?.InstanceId;
         _editingId = pet?.InstanceId;
-        _detailTitle.Text = pet is null ? "未选择桌宠" : UiText.CharacterName(pet.Definition.DisplayName);
-        _detailMeta.Text = pet is null ? "请从左侧选择桌宠。" : $"编号 {pet.InstanceId.ToString("N")[..8]}";
-        _runtime.Text = pet is null ? string.Empty : $"状态：{UiText.PetStateLabel(pet.State)} · 饥饿：{pet.Hunger:0.0}\n位置：{pet.Position.X:0}, {pet.Position.Y:0}";
-        _preview.ShowIdleFrame(pet?.Definition);
-        _remove.Enabled = _feed.Enabled = _reset.Enabled = pet is not null;
-        _walkOverride.Enabled = _dialogueOverride.Enabled = _activityMode.Enabled = pet is not null;
-        _scaleMode.Enabled = _jumpDesireMode.Enabled = _climbDesireMode.Enabled = _windowJumpDesireMode.Enabled = pet is not null;
-        if (pet is null)
-        {
-            _walkSource.Visible = _dialogueSource.Visible = false;
-            _activityRate.Enabled = _scale.Enabled = _jumpDesire.Enabled = _climbDesire.Enabled = _windowJumpDesire.Enabled = false;
-            return;
-        }
-
+        if (changedTarget) _operation.Visible = false;
+        _detailBody.Visible = _footer.Visible = pet is not null;
+        _emptyDetail.Visible = pet is null;
+        if (pet is null) { _preview.ShowIdleFrame(null); return; }
+        _detailTitle.Text = UiText.CharacterName(pet.Definition.DisplayName);
+        _detailMeta.Text = $"编号 {pet.InstanceId.ToString("N")[..8]}";
+        _runtime.Text = $"状态：{UiText.PetStateLabel(pet.State)} · 饥饿：{pet.Hunger:0.0}\n位置：{pet.Position.X:0}, {pet.Position.Y:0}";
+        _preview.ShowIdleFrame(pet.Definition);
+        _feed.Enabled = pet.State is PetState.Idle or PetState.Walk;
+        _reset.Enabled = pet.ScaleOverride is not null || pet.BehaviorOverrides != PetBehaviorOverrides.Inherit;
         _syncing = true;
         try
         {
             if (changedTarget || !_walkOverride.ContainsFocus) _walkOverride.SelectedIndex = (int)pet.BehaviorOverrides.WalkOverride;
             if (changedTarget || !_dialogueOverride.ContainsFocus) _dialogueOverride.SelectedIndex = (int)pet.BehaviorOverrides.DialogueOverride;
-            if (changedTarget || !_activityMode.ContainsFocus) _activityMode.SelectedIndex = pet.BehaviorOverrides.ActivityRateOverride is null ? 0 : 1;
-            if (changedTarget || !_activityRate.ContainsFocus) _activityRate.Value = (decimal)(pet.BehaviorOverrides.ActivityRateOverride ?? Host.ActivityRate);
-            if (changedTarget || !_scaleMode.ContainsFocus) _scaleMode.SelectedIndex = pet.ScaleOverride is null ? 0 : 1;
-            if (changedTarget || !_scale.ContainsFocus) _scale.Value = (decimal)(pet.ScaleOverride ?? Host.GlobalScale);
-            if (changedTarget || !_jumpDesireMode.ContainsFocus) _jumpDesireMode.SelectedIndex = pet.BehaviorOverrides.JumpDesireOverride is null ? 0 : 1;
-            if (changedTarget || !_jumpDesire.ContainsFocus) _jumpDesire.Value = (decimal)((pet.BehaviorOverrides.JumpDesireOverride ?? Host.JumpDesire) * 100f);
-            if (changedTarget || !_climbDesireMode.ContainsFocus) _climbDesireMode.SelectedIndex = pet.BehaviorOverrides.ClimbDesireOverride is null ? 0 : 1;
-            if (changedTarget || !_climbDesire.ContainsFocus) _climbDesire.Value = (decimal)((pet.BehaviorOverrides.ClimbDesireOverride ?? Host.ClimbDesire) * 100f);
-            if (changedTarget || !_windowJumpDesireMode.ContainsFocus) _windowJumpDesireMode.SelectedIndex = pet.BehaviorOverrides.WindowJumpDesireOverride is null ? 0 : 1;
-            if (changedTarget || !_windowJumpDesire.ContainsFocus) _windowJumpDesire.Value = (decimal)((pet.BehaviorOverrides.WindowJumpDesireOverride ?? Host.WindowJumpDesire) * 100f);
+            _scale.Bind(pet.InstanceId, pet.ScaleOverride, Host.GlobalScale);
+            _activity.Bind(pet.InstanceId, pet.BehaviorOverrides.ActivityRateOverride, Host.ActivityRate);
+            _jumpDesire.Bind(pet.InstanceId, pet.BehaviorOverrides.JumpDesireOverride, Host.JumpDesire);
+            _climbDesire.Bind(pet.InstanceId, pet.BehaviorOverrides.ClimbDesireOverride, Host.ClimbDesire);
+            _windowJumpDesire.Bind(pet.InstanceId, pet.BehaviorOverrides.WindowJumpDesireOverride, Host.WindowJumpDesire);
         }
         finally { _syncing = false; }
-        RefreshSources(pet.BehaviorOverrides);
-        RefreshScaleEditor(pet.ScaleOverride);
-    }
-
-    private void RefreshSources(PetBehaviorOverrides overrides)
-    {
-        _walkSource.Text = InstanceSettingState.WalkSource(overrides, Host.DefaultWalkEnabled, Host.IsPaused);
-        _dialogueSource.Text = InstanceSettingState.DialogueSource(overrides, Host.DefaultDialogueEnabled, Host.DialogueEnabled);
+        _walkSource.Text = InstanceSettingState.WalkSource(pet.BehaviorOverrides, Host.DefaultWalkEnabled, Host.IsPaused);
+        _dialogueSource.Text = InstanceSettingState.DialogueSource(pet.BehaviorOverrides, Host.DefaultDialogueEnabled, Host.DialogueEnabled);
         _walkSource.Visible = _walkSource.Text.Length > 0;
         _dialogueSource.Visible = _dialogueSource.Text.Length > 0;
-        _activityRate.Enabled = _editingId is not null && overrides.ActivityRateOverride is not null;
-        _jumpDesire.Enabled = _editingId is not null && overrides.JumpDesireOverride is not null;
-        _climbDesire.Enabled = _editingId is not null && overrides.ClimbDesireOverride is not null;
-        _windowJumpDesire.Enabled = _editingId is not null && overrides.WindowJumpDesireOverride is not null;
     }
-
-    private void RefreshScaleEditor(float? scaleOverride)
-        => _scale.Enabled = _editingId is not null && scaleOverride is not null;
 
     private void ApplyBooleanOverride(bool isWalk)
     {
-        if (_syncing || _editingId is not { } id || Host.FindPet(id) is not { } pet) return;
         var value = (isWalk ? _walkOverride : _dialogueOverride).SelectedIndex switch
         {
             1 => BooleanOverride.Enabled,
             2 => BooleanOverride.Disabled,
             _ => BooleanOverride.Inherit
         };
-        var current = pet.BehaviorOverrides;
-        Host.SetPetBehaviorOverrides(id, isWalk ? current with { WalkOverride = value } : current with { DialogueOverride = value });
-        RefreshSources(pet.BehaviorOverrides);
+        ApplyBehaviorChange(current => isWalk ? current with { WalkOverride = value } : current with { DialogueOverride = value });
     }
 
-    private void ApplyActivityOverride()
+    private void ApplyBehaviorChange(Func<PetBehaviorOverrides, PetBehaviorOverrides> change)
     {
         if (_syncing || _editingId is not { } id || Host.FindPet(id) is not { } pet) return;
-        var current = pet.BehaviorOverrides;
-        var overrideValue = _activityMode.SelectedIndex == 0 ? null : (float?)_activityRate.Value;
-        Host.SetPetBehaviorOverrides(id, current with { ActivityRateOverride = overrideValue });
-        RefreshSources(pet.BehaviorOverrides);
+        Host.SetPetBehaviorOverrides(id, change(pet.BehaviorOverrides));
+        RefreshFromHost();
     }
 
-    private void ApplyScaleOverride()
+    private void SetOperation(string message)
     {
-        if (_syncing || _editingId is not { } id || Host.FindPet(id) is not { } pet) return;
-        var overrideValue = _scaleMode.SelectedIndex == 0 ? null : (float?)_scale.Value;
-        Host.SetPetScaleOverride(id, overrideValue);
-        RefreshScaleEditor(pet.ScaleOverride);
+        _operation.Text = message; _operation.Visible = true;
     }
-
-    private void ApplyDesireOverride(bool isJump)
-    {
-        if (_syncing || _editingId is not { } id || Host.FindPet(id) is not { } pet) return;
-        var current = pet.BehaviorOverrides;
-        var mode = isJump ? _jumpDesireMode : _climbDesireMode;
-        var editor = isJump ? _jumpDesire : _climbDesire;
-        var overrideValue = mode.SelectedIndex == 0
-            ? null
-            : (float?)Math.Clamp((float)editor.Value / 100f, 0f, 1f);
-        Host.SetPetBehaviorOverrides(id, isJump
-            ? current with { JumpDesireOverride = overrideValue }
-            : current with { ClimbDesireOverride = overrideValue });
-        RefreshSources(pet.BehaviorOverrides);
-    }
-
-    private void ApplyWindowJumpDesireOverride()
-    {
-        if (_syncing || _editingId is not { } id || Host.FindPet(id) is not { } pet) return;
-        var overrideValue = _windowJumpDesireMode.SelectedIndex == 0
-            ? null
-            : (float?)Math.Clamp((float)_windowJumpDesire.Value / 100f, 0f, 1f);
-        Host.SetPetBehaviorOverrides(id, pet.BehaviorOverrides with { WindowJumpDesireOverride = overrideValue });
-        RefreshSources(pet.BehaviorOverrides);
-    }
-
-    private static AntdUI.Select CreateOverrideCombo()
-        => UiTheme.CreateSelect(150);
 }
